@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string.h>
+#include <algorithm>
 
 using namespace Packet;
 
@@ -27,7 +28,8 @@ Client::Data::Data(Reference reference_, uint16_t idx_, const char *data_)
 Client::E2E_Check::E2E_Check(Reference reference_, const char *sha1_file_checksum_) 
     : Base(reference_, Type::CLIENT_E2E_CHECK) {
     // NEEDSWORK -- writes null-terminator out of struct
-    std::strcpy(sha1_file_checksum, sha1_file_checksum_);
+    std::copy(&sha1_file_checksum_[0], &sha1_file_checksum_[20],
+              &sha1_file_checksum[0]);
     checksum = util::get_packet_checksum(this);
 }
 

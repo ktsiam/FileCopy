@@ -46,10 +46,10 @@ INCLUDES = $(C150LIB)c150dgmsocket.h $(C150LIB)c150nastydgmsocket.h $(C150LIB)c1
 
 all: client-e2e-check server-e2e-check
 
-client-e2e-check: client-e2e-check.cpp protocol.h protocol.cpp util.h $(C150AR) $(INCLUDES)
+client-e2e-check: client-e2e-check.cpp protocol.h protocol.cpp util.h util.cpp $(C150AR) $(INCLUDES)
 	$(CPP) -o client-e2e-check $(CPPFLAGS) client-e2e-check.cpp protocol.cpp util.cpp $(C150AR) -lssl -lcrypto
 
-server-e2e-check: server-e2e-check.cpp protocol.h protocol.cpp util.h $(C150AR) $(INCLUDES)
+server-e2e-check: server-e2e-check.cpp protocol.h protocol.cpp util.h util.cpp $(C150AR) $(INCLUDES)
 	$(CPP) -o server-e2e-check $(CPPFLAGS) server-e2e-check.cpp protocol.cpp util.cpp $(C150AR) -lssl -lcrypto
 
 # all: nastyfiletest makedatafile sha1test e2eclient e2eserver fileCopyWriter fileCopyReader

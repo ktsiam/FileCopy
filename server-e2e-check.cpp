@@ -8,6 +8,7 @@
 using namespace C150NETWORK;
 
 int main(int argc, char *argv[]) {
+    GRADEME(argc, argv);
     assert(argc == 4);
 
     // ignoring argv[1], argv[2] for now
@@ -26,6 +27,10 @@ int main(int argc, char *argv[]) {
         
         if (connect_pkt_opt.has_value()) {
             const Packet::Client::Connect &connect_pkt = connect_pkt_opt.value();
+            *GRADING << "File: " << (target_dir + connect_pkt.filename) 
+                      << " starting to receive file\n";
+            *GRADING << "File: " << (target_dir + connect_pkt.filename) 
+                      << " received, beginning end-to-end check\n";
 
             // NEEDSWORK: E2E must have Reference of Connect-reference + 1 right now
             Packet::Reference ref = connect_pkt.reference;
@@ -54,9 +59,11 @@ int main(int argc, char *argv[]) {
             bool success_e2e = sha1 == std::string(&e2e_pkt.sha1_file_checksum[0],
                                                    &e2e_pkt.sha1_file_checksum[20]);
         
-            std::cerr << (success_e2e ? "SUCCESSFULLY" : "UNSUCCESSFULLY") 
-                      << " transmitted " << ref_to_filename[e2e_ref] << '\n'; 
+            *GRADING << "File: " << ref_to_filename[e2e_ref] << " end-to-end check " 
+                      << (success_e2e ? "succeeded\n" : "failed\n");
         
+            // No acknowledgement retries are done. The client will send another E2E
+            // packet if no acknowledgement arrives in a certain interval.
             Packet::Server::Ack ack{e2e_ref, success_e2e};
             std::string msg = util::serialize(ack);
             sock.write(msg.c_str(), msg.size()+1);

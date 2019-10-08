@@ -6,7 +6,7 @@
 
 std::string util::get_SHA1_from_file(std::string const& filename) {
     std::ifstream inf(filename);
-    if (!inf) return "";
+    if (!inf) throw "Non-existant file";
 
     std::ostringstream oss;
     oss << inf.rdbuf();
