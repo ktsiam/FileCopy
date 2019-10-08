@@ -8,8 +8,8 @@ using Reference = uint16_t; // Client: idempotency token
                             // Server: reference to Client packet
 
 // Slightly redundant because of Reference, but useful in practice
-enum Type : uint16_t { CLIENT_CONNECT, CLIENT_DATA, CLIENT_E2E_CHECK,
-        SERVER_ACK, SERVER_CLOSE };
+enum Type : uint16_t { CLIENT_CONNECT, CLIENT_DATA, CLIENT_E2E_CHECK, 
+        CLIENT_CLOSE, SERVER_ACK };
 
 
 // Make sure no padding for all Packets (for checksum)
@@ -43,6 +43,11 @@ namespace Client {
         
         char sha1_file_checksum[20] = {0};
     };
+
+    struct Close : Base {
+        Close(Reference reference_);
+    };
+
 } // namespace Client
 
 namespace Server {
@@ -51,10 +56,6 @@ struct Ack : Base {
 
     // defaults to true. Allows information about failure of E2E check 
     uint16_t success; 
-};
-
-struct Close : Base {
-    Close(Reference reference_);
 };
 } // namespace Server
 

@@ -1,8 +1,5 @@
 #include "c150nastydgmsocket.h"
 #include "c150grading.h"
-#include <openssl/sha.h>
-#include <cstdlib>
-#include <cstdio>
 #include <cassert>
 #include <vector>
 #include <filesystem>
@@ -30,31 +27,26 @@ int main(int argc, char *argv[]) {
     sock.setServerName(const_cast<char*>(server_name.c_str()));
     sock.turnOnTimeouts(3000);
 
-    uint16_t ref_token = 0;
-    char incomingMessage[512];
+    Packet::Reference ref_token = 0;
     for (const std::string &fname : filenames) {
+        
+        // Connect packet : transfers filename
         ++ref_token;
         Packet::Client::Connect connect_packet{ref_token, 0, fname.c_str()};
-        std::string msg = util::serialize(connect_packet);
-
-        int tries_left = 5;
-        int readlen;
-        while(1) {
-            if (tries_left-- == 0) {
-                throw C150NetworkException("No response after 5 tries");
-            }
-            sock.write(msg.c_str(), msg.size()+1);
-            readlen = sock.read(incomingMessage, sizeof(incomingMessage));
-            
-            if (sock.timedout()) continue;
-            std::optional<Packet::Server::Ack> inc_opt = 
-                util::unserialize<Packet::Server::Ack>(incomingMessage, readlen);
-            if (!inc_opt.has_value()) continue; // handles size, checksum and type errors
-            Packet::Server::Ack inc = inc_opt.value();
-            std::cerr << "Was file correct? : " << inc.success << std::endl;
-            break;
-        }
+        util::send_to_server(sock, connect_packet);
         
-        // expecting Packet::Server::Close
+        // E2E check packet : checks whether file has been transfered correctly.
+        ++ref_token;
+        std::string sha1 = util::get_SHA1_from_file(fname);
+        
+        Packet::Client::E2E_Check e2e_packet{ref_token, sha1.c_str()};
+        bool success = util::send_to_server(sock, e2e_packet);
+        std::cerr << (success ? "SUCCESSFULLY" : "UNSUCCESSFULLY")
+                  << " transmitted " << fname << '\n';
     }
+    
+    // Close packet : informs server we're done
+    ++ref_token;
+    Packet::Client::Close close_packet{ref_token};
+    util::send_to_server(sock, close_packet);
 }

@@ -44,10 +44,13 @@ LDFLAGS = -lpthread -std=c++17
 INCLUDES = $(C150LIB)c150dgmsocket.h $(C150LIB)c150nastydgmsocket.h $(C150LIB)c150network.h $(C150LIB)c150exceptions.h $(C150LIB)c150debug.h $(C150LIB)c150utility.h
 
 
-all: client-e2e-check
+all: client-e2e-check server-e2e-check
 
 client-e2e-check: client-e2e-check.cpp protocol.h protocol.cpp util.h $(C150AR) $(INCLUDES)
 	$(CPP) -o client-e2e-check $(CPPFLAGS) client-e2e-check.cpp protocol.cpp util.cpp $(C150AR) -lssl -lcrypto
+
+server-e2e-check: server-e2e-check.cpp protocol.h protocol.cpp util.h $(C150AR) $(INCLUDES)
+	$(CPP) -o server-e2e-check $(CPPFLAGS) server-e2e-check.cpp protocol.cpp util.cpp $(C150AR) -lssl -lcrypto
 
 # all: nastyfiletest makedatafile sha1test e2eclient e2eserver fileCopyWriter fileCopyReader
 
