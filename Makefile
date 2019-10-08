@@ -43,33 +43,43 @@ C150AR = $(C150LIB)c150ids.a
 LDFLAGS = -lpthread -std=c++17
 INCLUDES = $(C150LIB)c150dgmsocket.h $(C150LIB)c150nastydgmsocket.h $(C150LIB)c150network.h $(C150LIB)c150exceptions.h $(C150LIB)c150debug.h $(C150LIB)c150utility.h
 
-all: nastyfiletest makedatafile sha1test e2eclient e2eserver fileCopyWriter
 
-fileCopyWriter: fileCopyWriter.cpp $(C150AR) $(INCLUDES)
-	$(CPP) $(LDFLAGS) -o fileCopyWriter $(CPPFLAGS) fileCopyWriter.cpp $(C150AR) -lssl -lcrypto
-#
-# Build the nastyfiletest sample
-#
-nastyfiletest: nastyfiletest.cpp  $(C150AR) $(INCLUDES)
-	$(CPP) -o nastyfiletest  $(CPPFLAGS) nastyfiletest.cpp $(C150AR)
+all: client-e2e-check
 
-#
-# Build the sha1test
-#
-sha1test: sha1test.cpp
-	$(CPP) -o sha1test sha1test.cpp -lssl -lcrypto
+client-e2e-check: client-e2e-check.cpp protocol.h protocol.cpp util.h $(C150AR) $(INCLUDES)
+	$(CPP) -o client-e2e-check $(CPPFLAGS) client-e2e-check.cpp protocol.cpp util.cpp $(C150AR) -lssl -lcrypto
 
-e2eserver: e2eserver.cpp $(C150AR) $(INCLUDES)
-	$(CPP) -o e2eserver $(CPPFLAGS) e2eserver.cpp -lssl -lcrypto $(C150AR)
+# all: nastyfiletest makedatafile sha1test e2eclient e2eserver fileCopyWriter fileCopyReader
 
-e2eclient: e2eclient.cpp $(C150AR) $(INCLUDES)
-	$(CPP) -o e2eclient $(CPPFLAGS) e2eclient.cpp -lssl -lcrypto $(C150AR)
+# fileCopyWriter: fileCopyWriter.cpp $(C150AR) $(INCLUDES) fileCopyUtils.h
+# 	$(CPP) $(LDFLAGS) -o fileCopyWriter $(CPPFLAGS) fileCopyWriter.cpp $(C150AR) -lssl -lcrypto
 
-#
-# Build the makedatafile 
-#
-makedatafile: makedatafile.cpp
-	$(CPP) -o makedatafile makedatafile.cpp 
+# fileCopyReader: fileCopyReader.cpp $(C150AR) $(INCLUDES) fileCopyUtils.h
+# 	$(CPP) $(LDFLAGS) -o fileCopyReader $(CPPFLAGS) fileCopyReader.cpp $(C150AR) -lssl -lcrypto
+
+# #
+# # Build the nastyfiletest sample
+# #
+# nastyfiletest: nastyfiletest.cpp  $(C150AR) $(INCLUDES)
+# 	$(CPP) -o nastyfiletest  $(CPPFLAGS) nastyfiletest.cpp $(C150AR)
+
+# #
+# # Build the sha1test
+# #
+# sha1test: sha1test.cpp
+# 	$(CPP) -o sha1test sha1test.cpp -lssl -lcrypto
+
+# e2eserver: e2eserver.cpp $(C150AR) $(INCLUDES)
+# 	$(CPP) -o e2eserver $(CPPFLAGS) e2eserver.cpp -lssl -lcrypto $(C150AR)
+
+# e2eclient: e2eclient.cpp $(C150AR) $(INCLUDES)
+# 	$(CPP) -o e2eclient $(CPPFLAGS) e2eclient.cpp -lssl -lcrypto $(C150AR)
+
+# #
+# # Build the makedatafile 
+# #
+# makedatafile: makedatafile.cpp
+# 	$(CPP) -o makedatafile makedatafile.cpp 
 
 #
 # To get any .o, compile the corresponding .cpp
@@ -83,6 +93,6 @@ makedatafile: makedatafile.cpp
 # for forcing complete rebuild#
 
 clean:
-	 rm -f copyFileWriter nastyfiletest sha1test makedatafile e2etest *.o 
+	 rm -f copyFileWriter copyFileReader nastyfiletest sha1test makedatafile e2etest *.o 
 
 
