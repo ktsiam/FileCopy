@@ -27,7 +27,6 @@ std::string serialize(const T& o) {
     return std::string{bytes, bytes+sizeof(o)};
 }
 
-#include <iostream>
 template<typename T>
     std::optional<T> deserialize(char *msg, std::size_t readlen, Packet::Type tp) {
     msg[readlen] = '\0'; // NEEDSWORK clean message
