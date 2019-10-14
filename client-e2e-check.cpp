@@ -13,8 +13,9 @@ using namespace C150NETWORK;
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);
     assert(argc == 5);
-    // ignoring argv[2], argv[3] for now
+    // ignoring argv[3] for now
     std::string server_name = argv[1];
+    int network_nastiness   = std::stoi(argv[2]);
     std::string dir_name    = argv[4];
     
     std::vector<std::string> filenames;
@@ -24,9 +25,9 @@ int main(int argc, char *argv[]) {
         filenames.push_back(file.path());
     }
     
-    C150NastyDgmSocket sock{0};
-    sock.setServerName(const_cast<char*>(server_name.c_str()));
-    sock.turnOnTimeouts(3000);
+    C150NastyDgmSocket sock{network_nastiness};
+    sock.setServerName(server_name.data());
+    sock.turnOnTimeouts(30);
 
     Packet::Reference ref_token = 0;
     for (const std::string &fname : filenames) {

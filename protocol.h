@@ -11,23 +11,29 @@ using Reference = uint16_t; // Client: idempotency token
 enum Type : uint16_t { CLIENT_CONNECT, CLIENT_DATA, CLIENT_E2E_CHECK, 
         CLIENT_CLOSE, SERVER_ACK };
 
-
 // Make sure no padding for all Packets (for checksum)
 #pragma pack(push, 1)
 
+
 template<class Pkt_T> // CRTP pattern
 struct Base {
-    mutable Checksum  checksum;
     Reference reference;
-    Type type;
     
-    Type  my_type() const;
     bool is_corrupted()  const;
     bool is_valid_type() const;
+
 protected:
-    void set_checksum();
-    Base(Reference reference_, Type type_);
+    void     set_valid_checksum() const;
+    Checksum get_valid_checksum() const;
+
+    Base(Reference reference_);
     ~Base() = default;
+
+private:
+    static Type my_type();
+
+    Type type;
+    mutable Checksum checksum; // modified & reverted during some methods
 };
 
 namespace Client {
@@ -69,7 +75,8 @@ struct Ack : Base<Ack> {
 #pragma pack(pop) // No longer tightly pack structs
 } // namespace Packet
 
-// instantiating templates;
+
+// instantiating Packet::Base templates
 template struct Packet::Base<Packet::Client::Connect>;
 template struct Packet::Base<Packet::Client::Data>;
 template struct Packet::Base<Packet::Client::E2E_Check>;

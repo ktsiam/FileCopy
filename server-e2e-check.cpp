@@ -12,10 +12,11 @@ using namespace C150NETWORK;
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);
     assert(argc == 4);
-
-    // ignoring argv[1], argv[2] for now
+   
+    int network_nastiness = std::stoi(argv[1]);
+    // ignoring argv[2] for now
     std::string target_dir = argv[3];
-    C150NastyDgmSocket sock{0};
+    C150NastyDgmSocket sock{network_nastiness};
     
     char incomingMessage[512];
     int readlen;

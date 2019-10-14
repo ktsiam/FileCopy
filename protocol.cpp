@@ -8,28 +8,46 @@
 using namespace Packet;
 
 template<class Pkt_T>
-Base<Pkt_T>::Base(Reference reference_, Type type_)
-    : reference(reference_), type(type_) {}
+Base<Pkt_T>::Base(Reference reference_)
+    : reference(reference_), type(my_type()) {}
 
 template<class Pkt_T>
-void Base<Pkt_T>::set_checksum() {
-    auto check = util::get_packet_checksum(static_cast<const Pkt_T&>(*this));
+void Base<Pkt_T>::set_valid_checksum() const {
+    checksum = 0;
+    // temporary side effects on checksum
+    auto check = get_valid_checksum(); 
     checksum = check;
 }
 
 template<class Pkt_T>
+Checksum Base<Pkt_T>::get_valid_checksum() const {
+    static_assert(sizeof(*this) % 2 == 0);
+
+    // removing checksum from calculation
+    Checksum old_checksum = checksum; 
+    checksum = 0;
+
+    uint32_t check_sum_ = 0;
+    for (std::size_t i = 0; i < sizeof(Pkt_T)/2; ++i) {
+        check_sum_ += reinterpret_cast<const uint16_t*>(this)[i];
+    }
+    checksum = old_checksum; // re-adding old checksum
+    return (check_sum_ + (check_sum_ >> 8)) & 0xFF;
+}
+
+template<class Pkt_T>
 bool Base<Pkt_T>::is_corrupted() const {
-    checksum = util::get_packet_checksum(static_cast<const Pkt_T&>(*this));
-    Checksum expected = util::get_packet_checksum(static_cast<const Pkt_T&>(*this));
-    bool is_corrupted = expected != checksum;
-    return is_corrupted;
+    Checksum expected = get_valid_checksum();
+    return expected != checksum;
 }
 
 template<class Pkt_T>
 bool Base<Pkt_T>::is_valid_type() const { return type == my_type(); }
 
+
+// mapping from Packet type to enum Packet::Type
 #define MY_TYPE_SPECIALIZATION(PKT_TP, TYPEID) \
-template<> Type Base<PKT_TP>::my_type() const { return TYPEID; }
+template <> Type Base<PKT_TP>::my_type() { return TYPEID; }
 
 MY_TYPE_SPECIALIZATION(Client::Connect,   Type::CLIENT_CONNECT)
 MY_TYPE_SPECIALIZATION(Client::E2E_Check, Type::CLIENT_E2E_CHECK)
@@ -40,32 +58,36 @@ MY_TYPE_SPECIALIZATION(Server::Ack,       Type::SERVER_ACK)
 #undef MY_TYPE_SPECIALIZATION
 
 
+
+
+/* Specialized Packets */
+
 Client::Connect::Connect(Reference reference_, uint16_t packet_count_, 
                          const char *filename_)
-    : Base(reference_, Type::CLIENT_CONNECT), packet_count(packet_count_) {
+    : Base(reference_), packet_count(packet_count_) {
     std::strcpy(filename, util::remove_path(filename_).c_str());    
-    set_checksum();
+    set_valid_checksum();
 }
 
 Client::Data::Data(Reference reference_, uint16_t idx_, const char *data_)
-    : Base(reference_, Type::CLIENT_DATA), idx(idx_) {
+    : Base(reference_), idx(idx_) {
     std::strcpy(data, data_);
-    set_checksum();
+    set_valid_checksum();
 }
 
 Client::E2E_Check::E2E_Check(Reference reference_, const char *sha1_file_checksum_) 
-    : Base(reference_, Type::CLIENT_E2E_CHECK) {
+    : Base(reference_) {
     std::copy(&sha1_file_checksum_[0], &sha1_file_checksum_[20],
               &sha1_file_checksum[0]);
-    set_checksum();
+    set_valid_checksum();
 }
 
 Client::Close::Close(Reference reference_)
-    : Base(reference_, Type::CLIENT_CLOSE) {
-    set_checksum();
+    : Base(reference_) {
+    set_valid_checksum();
 }
 
 Server::Ack::Ack(Reference reference_, bool success_) 
-    : Base(reference_, Type::SERVER_ACK), success(success_) {
-    set_checksum();
+    : Base(reference_), success(success_) {
+    set_valid_checksum();
 }
