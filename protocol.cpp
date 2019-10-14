@@ -9,7 +9,7 @@ using namespace Packet;
 
 template<class Pkt_T>
 Base<Pkt_T>::Base(Reference reference_)
-    : reference(reference_), type(my_type()) {}
+    : reference(reference_), stored_type(my_type()) {}
 
 template<class Pkt_T>
 void Base<Pkt_T>::set_valid_checksum() const {
@@ -42,8 +42,9 @@ bool Base<Pkt_T>::is_corrupted() const {
 }
 
 template<class Pkt_T>
-bool Base<Pkt_T>::is_valid_type() const { return type == my_type(); }
-
+bool Base<Pkt_T>::is_valid_type() const { 
+    return stored_type == my_type(); 
+}
 
 // mapping from Packet type to enum Packet::Type
 #define MY_TYPE_SPECIALIZATION(PKT_TP, TYPEID) \

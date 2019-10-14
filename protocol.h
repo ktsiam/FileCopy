@@ -32,7 +32,7 @@ protected:
 private:
     static Type my_type();
 
-    Type type;
+    Type stored_type;
     mutable Checksum checksum; // modified & reverted during some methods
 };
 
