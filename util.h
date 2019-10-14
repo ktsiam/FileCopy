@@ -1,6 +1,9 @@
-#pragma once
+#ifndef PACKET_UTILS_H_
+#define PACKET_UTILS_H_
+
 #include <string>
 #include <optional>
+#include <type_traits>
 #include "protocol.h"
 #include "c150nastydgmsocket.h"
 
@@ -12,13 +15,17 @@ std::string get_SHA1_from_file(std::string const& filename);
 std::string remove_path(std::string const& fname);
 
 template<typename T>
-Packet::Checksum get_packet_checksum(const T &o) {
+Packet::Checksum get_packet_checksum(T &o) {
     static_assert(sizeof(T) % 2 == 0);
+    
+    Packet::Checksum old_checksum = o.checksum;
+    o.checksum = 0;
     uint32_t check_sum_ = 0;
     for (std::size_t i = 1; i < sizeof(T)/2; ++i) {
         check_sum_ += reinterpret_cast<const uint16_t*>(&o)[i];
     }
-    return (check_sum_ + (check_sum_ >> 8)) && 0xFF;
+    o.checksum = old_checksum;
+    return (check_sum_ + (check_sum_ >> 8)) & 0xFF;
 }
 
 template<typename T>
@@ -28,13 +35,13 @@ std::string serialize(const T& o) {
 }
 
 template<typename T>
-    std::optional<T> deserialize(char *msg, std::size_t readlen, Packet::Type tp) {
+std::optional<T> deserialize(char *msg, std::size_t readlen) {
     msg[readlen] = '\0'; // NEEDSWORK clean message
     if (readlen < sizeof(T)) return {};
     const T *obj = reinterpret_cast<const T*>(msg);
-    if (obj->type != tp) return {};
+    if (!obj->is_valid_type()) return {};
     // NEEDSWORK: FIX CHECKSUM
-    //if (obj->checksum == get_packet_checksum(*obj)) { return {}; }
+    if (obj->is_corrupted()) { return {}; }
     return {*obj};
 }
 
@@ -53,12 +60,10 @@ bool send_to_server(C150NastyDgmSocket &sock, const T &packet) {
         }
         sock.write(msg.c_str(), msg.size()+1);
         readlen = sock.read(incomingMessage, sizeof(incomingMessage));
-            
         if (sock.timedout()) continue;
 
-        std::optional<Packet::Server::Ack> inc_opt = 
-            util::deserialize<Packet::Server::Ack>(incomingMessage, readlen, 
-                                                   Packet::SERVER_ACK);
+        std::optional<Packet::Server::Ack> inc_opt =
+            util::deserialize<Packet::Server::Ack>(incomingMessage, readlen);
         if (!inc_opt.has_value()) continue; // handles size, checksum and type errors
 
         const Packet::Server::Ack &inc = inc_opt.value();
@@ -67,3 +72,5 @@ bool send_to_server(C150NastyDgmSocket &sock, const T &packet) {
     }
 }
 } // namespace util
+
+#endif // PACKET_UTILS_H_

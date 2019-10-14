@@ -8,22 +8,28 @@ C150LIB = $(COMP117)/files/c150Utils/
 C150AR = $(C150LIB)c150ids.a
 
 LDFLAGS = -lpthread -std=c++17
-INCLUDES = $(C150LIB)c150dgmsocket.h $(C150LIB)c150nastydgmsocket.h $(C150LIB)c150network.h $(C150LIB)c150exceptions.h $(C150LIB)c150debug.h $(C150LIB)c150utility.h
+INCLUDES = $(C150LIB)c150dgmsocket.h $(C150LIB)c150nastydgmsocket.h $(C150LIB)c150network.h $(C150LIB)c150exceptions.h $(C150LIB)c150debug.h $(C150LIB)c150utility.h protocol.h util.h
 
 
-all: client-e2e-check server-e2e-check
+all: client-e2e-check server-e2e-check 
 
-client-e2e-check: client-e2e-check.o protocol.h protocol.o util.h util.o $(C150AR) $(INCLUDES)
+client-e2e-check: client-e2e-check.o protocol.o util.o $(C150AR) $(INCLUDES)
 	$(CPP) -o client-e2e-check $(CPPFLAGS) client-e2e-check.o protocol.o util.o $(C150AR) -lssl -lcrypto
 
-server-e2e-check: server-e2e-check.o protocol.h protocol.o util.h util.o $(C150AR) $(INCLUDES)
+server-e2e-check: server-e2e-check.o protocol.o util.o $(C150AR) $(INCLUDES)
 	$(CPP) -o server-e2e-check $(CPPFLAGS) server-e2e-check.o protocol.o util.o $(C150AR) -lssl -lcrypto
+
+protocol.o: protocol.cpp $(C150AR) $(INCLUDES)
+	$(CPP) -c $(CPPFLAGS) protocol.cpp
+
+util.o: util.cpp protocol.o $(C150AR) $(INCLUDES)
+	$(CPP) -c $(CPPFLAGS) util.cpp
 
 #
 # To get any .o, compile the corresponding .cpp
 #
-%.o:%.cpp  $(INCLUDES)
-	$(CPP) -c  $(CPPFLAGS) $< 
+# %.o:%.cpp  $(INCLUDES)
+# 	$(CPP) -c  $(CPPFLAGS) $< 
 
 
 #
@@ -31,6 +37,6 @@ server-e2e-check: server-e2e-check.o protocol.h protocol.o util.h util.o $(C150A
 # for forcing complete rebuild#
 
 clean:
-	rm -f client-e2e-check server-e2e-check *.o
+	rm -f client-e2e-check server-e2e-check *.o GRADELOG.*
 
 

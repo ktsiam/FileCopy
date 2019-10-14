@@ -8,10 +8,11 @@
 
 using namespace C150NETWORK;
 
+#define GRADING &std::cout
+
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);
     assert(argc == 5);
-
     // ignoring argv[2], argv[3] for now
     std::string server_name = argv[1];
     std::string dir_name    = argv[4];

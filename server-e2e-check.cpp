@@ -7,6 +7,8 @@
 
 using namespace C150NETWORK;
 
+#define GRADING &std::cout
+
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);
     assert(argc == 4);
@@ -22,8 +24,7 @@ int main(int argc, char *argv[]) {
     while ((readlen = sock.read(incomingMessage, sizeof(incomingMessage)))) {
         // if message is CONNECT
         std::optional<Packet::Client::Connect> connect_pkt_opt =
-            util::deserialize<Packet::Client::Connect>(incomingMessage, readlen,
-                                                       Packet::CLIENT_CONNECT);
+            util::deserialize<Packet::Client::Connect>(incomingMessage, readlen);
         
         if (connect_pkt_opt.has_value()) {
             const Packet::Client::Connect &connect_pkt = connect_pkt_opt.value();
@@ -45,8 +46,7 @@ int main(int argc, char *argv[]) {
         
         //if message is E2E_CHECK
         std::optional<Packet::Client::E2E_Check> e2e_pkt_opt =
-            util::deserialize<Packet::Client::E2E_Check>(incomingMessage, readlen,
-                                                         Packet::CLIENT_E2E_CHECK);
+            util::deserialize<Packet::Client::E2E_Check>(incomingMessage, readlen);
         
         if (e2e_pkt_opt.has_value()) {
             const Packet::Client::E2E_Check &e2e_pkt = e2e_pkt_opt.value();
@@ -72,8 +72,7 @@ int main(int argc, char *argv[]) {
 
         // if message is CLOSE
         std::optional<Packet::Client::Close> close_pkt_opt =
-            util::deserialize<Packet::Client::Close>(incomingMessage, readlen, 
-                                                     Packet::CLIENT_CLOSE);        
+            util::deserialize<Packet::Client::Close>(incomingMessage, readlen);    
         if (close_pkt_opt.has_value()) {
             Packet::Server::Ack ack{close_pkt_opt.value().reference, true};
             std::string msg = util::serialize(ack);
