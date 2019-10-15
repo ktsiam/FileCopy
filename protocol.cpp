@@ -21,7 +21,7 @@ void Base<Pkt_T>::set_valid_checksum() const {
 
 template<class Pkt_T>
 Checksum Base<Pkt_T>::get_valid_checksum() const {
-    static_assert(sizeof(*this) % 2 == 0);
+    static_assert(sizeof(Pkt_T) % 2 == 0);
 
     // removing checksum from calculation
     Checksum old_checksum = checksum; 
@@ -50,6 +50,7 @@ bool Base<Pkt_T>::is_valid_type() const {
 #define MY_TYPE_SPECIALIZATION(PKT_TP, TYPEID) \
 template <> Type Base<PKT_TP>::my_type() { return TYPEID; }
 
+MY_TYPE_SPECIALIZATION(Client::Open,      Type::CLIENT_OPEN)
 MY_TYPE_SPECIALIZATION(Client::Connect,   Type::CLIENT_CONNECT)
 MY_TYPE_SPECIALIZATION(Client::E2E_Check, Type::CLIENT_E2E_CHECK)
 MY_TYPE_SPECIALIZATION(Client::Data,      Type::CLIENT_DATA)
@@ -62,15 +63,19 @@ MY_TYPE_SPECIALIZATION(Server::Ack,       Type::SERVER_ACK)
 
 
 /* Specialized Packets */
+Client::Open::Open(Reference reference_, uint32_t file_count_)
+    : Base(reference_), file_count(file_count_) {
+    set_valid_checksum();
+}
 
-Client::Connect::Connect(Reference reference_, uint16_t packet_count_, 
+Client::Connect::Connect(Reference reference_, uint32_t packet_count_, 
                          const char *filename_)
     : Base(reference_), packet_count(packet_count_) {
     std::strcpy(filename, util::remove_path(filename_).c_str());    
     set_valid_checksum();
 }
 
-Client::Data::Data(Reference reference_, uint16_t idx_, const char *data_)
+Client::Data::Data(Reference reference_, uint32_t idx_, const char *data_)
     : Base(reference_), idx(idx_) {
     std::strcpy(data, data_);
     set_valid_checksum();

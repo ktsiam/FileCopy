@@ -16,72 +16,77 @@ int main(int argc, char *argv[]) {
     int network_nastiness = std::stoi(argv[1]);
     // ignoring argv[2] for now
     std::string target_dir = argv[3];
-    C150NastyDgmSocket sock{network_nastiness};
-    
-    char incomingMessage[512];
-    int readlen;
-    std::string filename = "";
-    std::unordered_map<Packet::Reference, std::string> ref_to_filename;
-    while ((readlen = sock.read(incomingMessage, sizeof(incomingMessage)))) {
-        // if message is CONNECT
-        std::optional<Packet::Client::Connect> connect_pkt_opt =
-            util::deserialize<Packet::Client::Connect>(incomingMessage, readlen);
-        
-        if (connect_pkt_opt.has_value()) {
-            const Packet::Client::Connect &connect_pkt = connect_pkt_opt.value();
-            *GRADING << "File: " << (target_dir + connect_pkt.filename) 
-                      << " starting to receive file\n";
-            *GRADING << "File: " << (target_dir + connect_pkt.filename) 
-                      << " received, beginning end-to-end check\n";
+    C150NastyDgmSocket sock{network_nastiness};    
 
-            // NEEDSWORK: E2E must have Reference of Connect-reference + 1 right now
-            Packet::Reference ref = connect_pkt.reference;
-            ref_to_filename[ref+1] = target_dir + connect_pkt.filename;
+    bool e2e_success = false;
+    Packet::Reference curr_ref = 0;
+
+    // Open connection
+    std::cerr << "OPENING CONNECTION\n";
+    Packet::Client::Open open_pkt = 
+        util::expect_x<Packet::Client::Open>(sock, curr_ref);
+    std::cerr << "CONNECTION OPENNED\n";    
+
+    for (uint32_t file_idx = 0; file_idx < open_pkt.file_count; ++file_idx) {
+        // Connect
+        ++curr_ref;
+        Packet::Client::Connect connect_pkt = (file_idx == 0) 
+            ? util::expect_x_ack_y<Packet::Client::Connect, Packet::Client::Open>(
+                sock, curr_ref, curr_ref-1)
+            : util::expect_x_ack_y<Packet::Client::Connect, Packet::Client::E2E_Check>(
+                sock, curr_ref, curr_ref-1, e2e_success);
+
+
+        uint32_t packet_count = connect_pkt.packet_count;
+        Packet::Reference file_ref = connect_pkt.reference;        
+        std::string filename = target_dir + connect_pkt.filename;
+
+        std::ofstream outf{filename};
+        
+        // Receiving data
+        uint32_t pkt_idx = 0;
+        Packet::Client::Data data_pkt = 
+            util::expect_x_ack_y<Packet::Client::Data, Packet::Client::Connect>(
+                sock, file_ref + 1, file_ref);
+        
+        while (++pkt_idx < packet_count) {
+            outf << data_pkt.data;
             
-            // Sending acknowledgement
-            Packet::Server::Ack ack{ref, true};
-            std::string msg = util::serialize(ack);
-            sock.write(msg.c_str(), msg.size()+1);
-            continue;
+            data_pkt = 
+                util::expect_x_ack_y<Packet::Client::Data, Packet::Client::Data>(
+                    sock, (file_ref + pkt_idx + 1), (file_ref + pkt_idx));            
         }
-        
-        //if message is E2E_CHECK
-        std::optional<Packet::Client::E2E_Check> e2e_pkt_opt =
-            util::deserialize<Packet::Client::E2E_Check>(incomingMessage, readlen);
-        
-        if (e2e_pkt_opt.has_value()) {
-            const Packet::Client::E2E_Check &e2e_pkt = e2e_pkt_opt.value();
-            Packet::Reference e2e_ref = e2e_pkt.reference;
+        outf << data_pkt.data;
+        outf.close();
 
-            if (ref_to_filename.find(e2e_ref) == ref_to_filename.end()) continue;
+        // E2E Check
+        Packet::Client::E2E_Check e2e_pkt = 
+            util::expect_x_ack_y<Packet::Client::E2E_Check, Packet::Client::Data>(
+                sock, (file_ref + pkt_idx + 1), (file_ref + pkt_idx));
+        
+        std::string sha1 = util::get_SHA1_from_file(filename);
+        e2e_success = sha1 == std::string(&e2e_pkt.sha1_file_checksum[0],
+                                          &e2e_pkt.sha1_file_checksum[20]);
 
-            std::string sha1 = util::get_SHA1_from_file(ref_to_filename[e2e_ref]);
-        
-            bool success_e2e = sha1 == std::string(&e2e_pkt.sha1_file_checksum[0],
-                                                   &e2e_pkt.sha1_file_checksum[20]);
-        
-            *GRADING << "File: " << ref_to_filename[e2e_ref] << " end-to-end check " 
-                      << (success_e2e ? "succeeded\n" : "failed\n");
-        
-            // No acknowledgement retries are done. The client will send another E2E
-            // packet if no acknowledgement arrives in a certain interval.
-            Packet::Server::Ack ack{e2e_ref, success_e2e};
-            std::string msg = util::serialize(ack);
-            sock.write(msg.c_str(), msg.size()+1);
-            continue;
-        }
+        curr_ref = file_ref + pkt_idx + 1;
+        *GRADING << "File: " << filename << " end-to-end check " 
+                 << (e2e_success ? "succeeded\n" : "failed\n");
+    }
 
-        // if message is CLOSE
-        std::optional<Packet::Client::Close> close_pkt_opt =
-            util::deserialize<Packet::Client::Close>(incomingMessage, readlen);    
-        if (close_pkt_opt.has_value()) {
-            Packet::Server::Ack ack{close_pkt_opt.value().reference, true};
-            std::string msg = util::serialize(ack);
-            for (int i = 0; i < 5; ++i) {
-                // sending it 5 times to make sure it arrives
-                sock.write(msg.c_str(), msg.size()+1);
-            }
-            return 0;
-        }
+    ++curr_ref;
+    std::cerr << "WE ARE DONE. EXPECTING CLOSE PACKET with ref = " << curr_ref << '\n';
+    Packet::Client::Close close_pkt =
+        util::expect_x_ack_y<Packet::Client::Close, Packet::Client::E2E_Check>(
+            sock, curr_ref, e2e_success);
+
+    (void)close_pkt;
+    
+    std::cerr << "SENDING 15 ACKS AND QUITTING\n";
+
+    // sending 15 acknowledgements that Client::Close arrived
+    Packet::Server::Ack ack{curr_ref, true};
+    std::string msg = util::serialize(ack);
+    for (int i = 0; i < 15; ++i) {
+        sock.write(msg.c_str(), msg.size()+1);
     }
 }

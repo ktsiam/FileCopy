@@ -29,3 +29,10 @@ std::string util::remove_path(std::string const& fname) {
     }    
     return cut_fn;
 }
+
+void util::send_ack(C150NastyDgmSocket &sock, Packet::Reference ref, 
+                                              bool success) {
+    Packet::Server::Ack ack{ref, success};
+    std::string msg = util::serialize(ack);
+    sock.write(msg.c_str(), msg.size()+1);
+}

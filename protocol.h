@@ -1,14 +1,15 @@
-#pragma once
+#ifndef _FILECOPY_PROTOCOL_H_
+#define _FILECOPY_PROTOCOL_H_
 #include <cstdint>
 
 namespace Packet {
 
 using Checksum  = uint16_t; // Makes sure packet is intact
-using Reference = uint16_t; // Client: idempotency token
+using Reference = uint32_t; // Client: idempotency token
                             // Server: reference to Client packet
 
 // Slightly redundant because of Reference, but useful in practice
-enum Type : uint16_t { CLIENT_CONNECT, CLIENT_DATA, CLIENT_E2E_CHECK, 
+enum Type : uint16_t { CLIENT_OPEN, CLIENT_CONNECT, CLIENT_DATA, CLIENT_E2E_CHECK, 
         CLIENT_CLOSE, SERVER_ACK };
 
 // Make sure no padding for all Packets (for checksum)
@@ -22,14 +23,14 @@ struct Base {
     bool is_corrupted()  const;
     bool is_valid_type() const;
 
-protected:
+//protected:
     void     set_valid_checksum() const;
     Checksum get_valid_checksum() const;
 
     Base(Reference reference_);
     ~Base() = default;
 
-private:
+//private:
     static Type my_type();
 
     Type stored_type;
@@ -37,18 +38,28 @@ private:
 };
 
 namespace Client {
-    struct Connect : Base<Connect> {
-        Connect(Reference reference_, uint16_t packet_count_, const char *filename_);
+    
+    struct Open : Base<Open> {
+        Open(Reference reference_, uint32_t file_count_);
 
-        uint16_t packet_count;    // total number of packets
+        uint32_t file_count; // total number of files to be transferred
+    };
+
+    struct Connect : Base<Connect> {
+        Connect(Reference reference_, uint32_t packet_count_, const char *filename_);
+
+        uint32_t packet_count;    // total number of packets
         char filename[256] = {0}; // path is not included
     };
 
     struct Data : Base<Data> {
-        Data(Reference reference_, uint16_t idx_, const char *data_);
+        Data(Reference reference_, uint32_t idx_, const char *data_);
 
-        uint16_t idx; // index (< Connect::packet_count) of current data packet
-        char data[512-sizeof(idx)-sizeof(Base)] = {0}; // null terminated
+        uint32_t idx; // index (< Connect::packet_count) of current data packe
+
+        // -2 for null terminator in packet & retaining size multiple of 2
+        static constexpr int DATA_SIZE = 512-sizeof(idx)-sizeof(Base)-2;
+        char data[DATA_SIZE] = {0};
     };
 
     struct E2E_Check : Base<E2E_Check> {
@@ -77,8 +88,11 @@ struct Ack : Base<Ack> {
 
 
 // instantiating Packet::Base templates
+template struct Packet::Base<Packet::Client::Open>;
 template struct Packet::Base<Packet::Client::Connect>;
 template struct Packet::Base<Packet::Client::Data>;
 template struct Packet::Base<Packet::Client::E2E_Check>;
 template struct Packet::Base<Packet::Client::Close>;
 template struct Packet::Base<Packet::Server::Ack>;
+
+#endif // _FILECOPY_PROTOCOL_H_
