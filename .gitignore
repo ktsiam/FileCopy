@@ -1,4 +1,7 @@
-SRC
+SRC*
 TARGET
 TEST
 *.txt
+*.o
+client-e2e-check
+server-e2e-check

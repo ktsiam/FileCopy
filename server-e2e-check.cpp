@@ -25,17 +25,20 @@ int main(int argc, char *argv[]) {
     std::cerr << "OPENING CONNECTION\n";
     Packet::Client::Open open_pkt = 
         util::expect_x<Packet::Client::Open>(sock, curr_ref);
-    std::cerr << "CONNECTION OPENNED\n";    
+    std::cerr << "CONNECTION OPENNED\n";
 
+    bool just_openned_connection = true;
     for (uint32_t file_idx = 0; file_idx < open_pkt.file_count; ++file_idx) {
         // Connect
+        std::cerr << "WAITING FOR NEW CONNECT\n";
         ++curr_ref;
-        Packet::Client::Connect connect_pkt = (file_idx == 0) 
+        Packet::Client::Connect connect_pkt = just_openned_connection
             ? util::expect_x_ack_y<Packet::Client::Connect, Packet::Client::Open>(
                 sock, curr_ref, curr_ref-1)
             : util::expect_x_ack_y<Packet::Client::Connect, Packet::Client::E2E_Check>(
                 sock, curr_ref, curr_ref-1, e2e_success);
 
+        just_openned_connection = false;
 
         uint32_t packet_count = connect_pkt.packet_count;
         Packet::Reference file_ref = connect_pkt.reference;        
@@ -57,7 +60,7 @@ int main(int argc, char *argv[]) {
                     sock, (file_ref + pkt_idx + 1), (file_ref + pkt_idx));            
         }
         outf << data_pkt.data;
-        outf.close();
+        outf.close();        
 
         // E2E Check
         Packet::Client::E2E_Check e2e_pkt = 
@@ -71,6 +74,11 @@ int main(int argc, char *argv[]) {
         curr_ref = file_ref + pkt_idx + 1;
         *GRADING << "File: " << filename << " end-to-end check " 
                  << (e2e_success ? "succeeded\n" : "failed\n");
+
+        util::send_ack(sock, curr_ref, e2e_success);
+        if (e2e_success == false) {
+            --file_idx; // starting loop over for same file
+        }
     }
 
 

@@ -13,7 +13,7 @@ using namespace C150NETWORK;
 
 #define GRADING &std::cout
 
-const int DEFAULT_TIMEOUT = 5; // milliseconds
+const int DEFAULT_TIMEOUT = 50000;//5; // milliseconds
 
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);
@@ -54,47 +54,52 @@ int main(int argc, char *argv[]) {
 
         uint32_t packet_num = contents.size() / data_pkt_capacity + 
                              (contents.size() % data_pkt_capacity == 0 ? 0 : 1);
-        
-        // Connect packet : transfers filename
-        ++ref_token;
-        Packet::Client::Connect connect_packet{ref_token, packet_num, fname.c_str()};
-        *GRADING << "File: " << fname << ", beginning transmission, attempt 0\n";
-        util::send_to_server(sock, connect_packet);
-        
-        // Data transmission starts
-        for (uint32_t i = 0; i < packet_num; ++i) {
+
+        bool e2e_success;
+        do {
+            // Connect packet : transfers filename
             ++ref_token;
-            uint32_t data_start = i * data_pkt_capacity;
-            std::string data = contents.substr(data_start, data_pkt_capacity);
-            assert(data.size() <= data_pkt_capacity);
-
-            Packet::Client::Data data_packet{ref_token, i, data.c_str()};
-            try {
-                std::cerr << "sending data with ref " << ref_token << std::endl;
-                util::send_to_server(sock, data_packet);
-                std::cerr << "data sent!\n";
-            } catch (C150NetworkException& e) { std::cerr<< e.formattedExplanation(); throw; }
-        }
-
-        // E2E check packet : checks whether file has been transfered correctly.
-        ++ref_token;        
-        auto t1 = std::chrono::high_resolution_clock::now();
-        std::string sha1 = util::get_SHA1_from_file(fname);        
-        auto t2 = std::chrono::high_resolution_clock::now();
-
-        int duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1)
-                            .count();
+            Packet::Client::Connect connect_packet{ref_token, packet_num, fname.c_str()};
+            *GRADING << "File: " << fname << ", beginning transmission, attempt 0\n";
+            util::send_to_server(sock, connect_packet);
         
-        sock.turnOnTimeouts(std::max(duration/2, DEFAULT_TIMEOUT));
+            // Data transmission starts
+            for (uint32_t i = 0; i < packet_num; ++i) {
+                ++ref_token;
+                uint32_t data_start = i * data_pkt_capacity;
+                std::string data = contents.substr(data_start, data_pkt_capacity);
+                assert(data.size() <= data_pkt_capacity);
 
-        Packet::Client::E2E_Check e2e_packet{ref_token, sha1.c_str()};
-        std::cerr << "SENDING E2E with ref = " << ref_token << std::endl;
-        bool success = util::send_to_server(sock, e2e_packet);        
+                Packet::Client::Data data_packet{ref_token, i, data.c_str()};
+                try {
+                    std::cerr << "sending data with ref " << ref_token << std::endl;
+                    util::send_to_server(sock, data_packet);
+                    std::cerr << "data sent!\n";
+                } catch (C150NetworkException& e) { std::cerr<< e.formattedExplanation(); throw; }
+            } 
 
-        sock.turnOnTimeouts(DEFAULT_TIMEOUT);
+            // E2E check packet : checks whether file has been transfered correctly.
+            ++ref_token;        
+            auto t1 = std::chrono::high_resolution_clock::now();
+            std::string sha1 = util::get_SHA1_from_file(fname);        
+            auto t2 = std::chrono::high_resolution_clock::now();
 
-        *GRADING << "File: " << fname << " end-to-end check " 
-                 << (success ? "succeeded" : "failed") << ", attempt 0\n";
+            int duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1)
+                .count();
+        
+            sock.turnOnTimeouts(std::max(duration/2, DEFAULT_TIMEOUT));
+
+            Packet::Client::E2E_Check e2e_packet{ref_token, sha1.c_str()};
+            std::cerr << "SENDING E2E with ref = " << ref_token << std::endl;
+            e2e_success = util::send_to_server(sock, e2e_packet);
+            std::cerr << "DONE SENDING E2E\n";
+
+            sock.turnOnTimeouts(DEFAULT_TIMEOUT);
+
+            *GRADING << "File: " << fname << " end-to-end check " 
+                     << (e2e_success ? "succeeded" : "failed") << ", attempt 0\n";
+
+        } while (!e2e_success);
     }
     
     

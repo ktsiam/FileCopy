@@ -18,8 +18,8 @@ std::string remove_path(std::string const& fname);
 
 void send_ack(C150NastyDgmSocket &sock, Packet::Reference ref, bool success = true);
 
-template<typename T>
-bool send_to_server(C150NastyDgmSocket &sock, const T &packet) {
+template<typename Pkt_T>
+bool send_to_server(C150NastyDgmSocket &sock, const Pkt_T &packet) {
     static char incomingMessage[512];
     static const int total_retries = 100;
 
@@ -49,22 +49,23 @@ bool send_to_server(C150NastyDgmSocket &sock, const T &packet) {
 }
 
 
-template<class Curr_T, class Prev_T = Curr_T>
-Curr_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref, 
-                                                Packet::Reference prev_ref,
-                                                bool success = true) {
+template<class Exp_T, class Ack_T = Exp_T>
+Exp_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref, 
+                                               Packet::Reference prev_ref,
+                                               bool success_ack = true) {
+
     static char incomingMessage[512];
     while (1) {
         int readlen = sock.read(incomingMessage, sizeof(incomingMessage));
-        std::optional<Curr_T> curr_pkt_opt = Curr_T::deserialize(incomingMessage, readlen);
+        std::optional<Exp_T> curr_pkt_opt = Exp_T::deserialize(incomingMessage, readlen);
         
         if (curr_pkt_opt.has_value()) { // packet it correct type & intact
-            std::cerr << "Packet ok! " << Curr_T::my_type() << "\n";
-            const Curr_T &curr_pkt = curr_pkt_opt.value();
+            std::cerr << "Packet ok! " << Exp_T::my_type() << "\n";
+            const Exp_T &curr_pkt = curr_pkt_opt.value();
             if (curr_pkt.reference == curr_ref) {
                 std::cerr << "Packet ref ok!\n";
-                if (!std::is_same<Curr_T,Packet::Client::E2E_Check>::value) {
-                    send_ack(sock, curr_ref); // optimization sending ack immediately
+                if constexpr (!std::is_same<Exp_T,Packet::Client::E2E_Check>::value) {
+                    send_ack(sock, curr_ref); // optimization: send default ack immediately
                 }
                 return curr_pkt;
             }
@@ -72,16 +73,17 @@ Curr_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref,
             std::cerr << "Expected : " << curr_ref << " but got " << curr_pkt.reference << std::endl;
         }
         std::cerr << "WRONG PACKET TYPE RECEIVED. Got " << ((Packet::Base<Packet::Server::Ack>*)incomingMessage)->stored_type
-                  << " but expected " << Curr_T::my_type() << std::endl;
+                  << " but expected " << Exp_T::my_type() << std::endl;
         
-        std::optional<Prev_T> prev_pkt_opt = Prev_T::deserialize(incomingMessage, readlen);
+        std::optional<Ack_T> prev_pkt_opt = Ack_T::deserialize(incomingMessage, readlen);
         
         if (prev_pkt_opt.has_value() && // previous type (can be same as expected)
             prev_pkt_opt.value().reference == prev_ref) {
             std::cerr << "SENDING ACK FOR OLD\n";
-            send_ack(sock, prev_ref);
+            send_ack(sock, prev_ref, success_ack);
+            continue;
         }
-        std::cerr << "NOT SENDING ACK for : " << ((Packet::Base<Packet::Server::Ack>*)incomingMessage)->stored_type << "(got), " << Prev_T::my_type() << "(want) & ref = " << ((Packet::Base<Packet::Server::Ack>*)incomingMessage)->reference << ", expected = " << prev_ref << '\n';
+        std::cerr << "NOT SENDING ACK for : " << ((Packet::Base<Packet::Server::Ack>*)incomingMessage)->stored_type << "(got), " << Ack_T::my_type() << "(want) & ref = " << ((Packet::Base<Packet::Server::Ack>*)incomingMessage)->reference << ", expected = " << prev_ref << '\n';
     }
     assert(false && "Unreachable");
 }
