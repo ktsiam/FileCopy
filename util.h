@@ -63,7 +63,9 @@ Curr_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref,
             const Curr_T &curr_pkt = curr_pkt_opt.value();
             if (curr_pkt.reference == curr_ref) {
                 std::cerr << "Packet ref ok!\n";
-                send_ack(sock, curr_ref);
+                if (!std::is_same<Curr_T,Packet::Client::E2E_Check>::value) {
+                    send_ack(sock, curr_ref); // optimization sending ack immediately
+                }
                 return curr_pkt;
             }
             std::cerr << "Packet ref BAD!\n";

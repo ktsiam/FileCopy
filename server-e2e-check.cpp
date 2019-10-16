@@ -85,10 +85,10 @@ int main(int argc, char *argv[]) {
     
     std::cerr << "SENDING 15 ACKS AND QUITTING\n";
 
-    // sending 15 acknowledgements that Client::Close arrived
+    // sending 50 acknowledgements that Client::Close arrived
     Packet::Server::Ack ack{curr_ref, true};
     std::string msg = ack.serialize();
-    for (int i = 0; i < 15; ++i) {
+    for (int i = 0; i < 50; ++i) {
         sock.write(msg.c_str(), msg.size()+1);
     }
 }
