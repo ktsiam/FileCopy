@@ -11,7 +11,6 @@
 using C150NETWORK::C150NastyDgmSocket;
 using C150NETWORK::C150NetworkException;
 
-const extern int DEFAULT_TIMEOUT;
 namespace util {
 
 std::string get_SHA1_from_file(std::string const& filename);
@@ -20,14 +19,12 @@ std::string remove_path(std::string const& fname);
 void send_ack(C150NastyDgmSocket &sock, Packet::Reference ref, bool success = true);
 
 template<typename T>
-bool send_to_server(C150NastyDgmSocket &sock, const T &packet, int init_timeout = DEFAULT_TIMEOUT) {
+bool send_to_server(C150NastyDgmSocket &sock, const T &packet) {
     static char incomingMessage[512];
     static const int total_retries = 100;
 
     Packet::Reference ref_token = packet.reference;
-    std::string msg = packet.serialize();
-    
-    int timeout = init_timeout;
+    std::string msg = packet.serialize();    
 
     int readlen;
     sock.write(msg.c_str(), msg.size()+1);
@@ -37,8 +34,6 @@ bool send_to_server(C150NastyDgmSocket &sock, const T &packet, int init_timeout 
         if (sock.timedout()) { 
             std::cerr << "timedout\n";
             sock.write(msg.c_str(), msg.size()+1);
-            timeout += DEFAULT_TIMEOUT;
-            sock.turnOnTimeouts(timeout);
             continue;
         }
         
@@ -48,7 +43,6 @@ bool send_to_server(C150NastyDgmSocket &sock, const T &packet, int init_timeout 
         const Packet::Server::Ack &inc = inc_opt.value();
         if (inc.reference != ref_token) { std::cerr << "EXPECTED ref = " << ref_token << " but got " << inc.reference << std::endl; continue; }        
 
-        sock.turnOnTimeouts(init_timeout);
         return inc.success;
     }
     throw C150NetworkException("no response after 100 retries");

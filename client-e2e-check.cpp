@@ -12,8 +12,6 @@ using namespace C150NETWORK;
 
 #define GRADING &std::cout
 
-constexpr int DEFAULT_TIMEOUT = 1; // microseconds
-
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);
     assert(argc == 5);
@@ -22,6 +20,7 @@ int main(int argc, char *argv[]) {
     std::string server_name = argv[1];
     int network_nastiness   = std::stoi(argv[2]);
     std::string dir_name    = argv[4];    
+    const int DEFAULT_TIMEOUT = 1; // milliseconds
     
     std::vector<std::string> filenames;
     for (std::filesystem::directory_entry const& file :
@@ -76,20 +75,12 @@ int main(int argc, char *argv[]) {
         }
 
         // E2E check packet : checks whether file has been transfered correctly.
-        ++ref_token;
-        
-        // giving the server time to calculate checksum
-        auto t1 = std::chrono::high_resolution_clock::now();
-        std::string sha1 = util::get_SHA1_from_file(fname);
-        auto t2 = std::chrono::high_resolution_clock::now();
-        uint64_t duration = std::chrono::duration_cast<std::chrono::microseconds>(t2-t1)
-                            .count();
-        
+        ++ref_token;        
+        std::string sha1 = util::get_SHA1_from_file(fname);        
+
         Packet::Client::E2E_Check e2e_packet{ref_token, sha1.c_str()};
         std::cerr << "SENDING E2E with ref = " << ref_token << std::endl;
-        bool success = util::send_to_server(sock, e2e_packet, duration/5);
-        
-        sock.turnOnTimeouts(DEFAULT_TIMEOUT);
+        bool success = util::send_to_server(sock, e2e_packet);        
 
         *GRADING << "File: " << fname << " end-to-end check " 
                  << (success ? "succeeded" : "failed") << ", attempt 0\n";
