@@ -7,7 +7,7 @@
 
 using namespace C150NETWORK;
 
-#define GRADING &std::cout
+//#define GRADING &std::cout
 
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);
@@ -22,15 +22,12 @@ int main(int argc, char *argv[]) {
     Packet::Reference curr_ref = 0;
 
     // Open connection
-    std::cerr << "OPENING CONNECTION\n";
     Packet::Client::Open open_pkt = 
         util::expect_x<Packet::Client::Open>(sock, curr_ref);
-    std::cerr << "CONNECTION OPENNED\n";
 
     bool just_openned_connection = true;
     for (uint32_t file_idx = 0; file_idx < open_pkt.file_count; ++file_idx) {
         // Connect
-        std::cerr << "WAITING FOR NEW CONNECT\n";
         ++curr_ref;
         Packet::Client::Connect connect_pkt = just_openned_connection
             ? util::expect_x_ack_y<Packet::Client::Connect, Packet::Client::Open>(
@@ -72,8 +69,6 @@ int main(int argc, char *argv[]) {
                                           &e2e_pkt.sha1_file_checksum[20]);
 
         curr_ref = file_ref + pkt_idx + 1;
-        *GRADING << "File: " << filename << " end-to-end check " 
-                 << (e2e_success ? "succeeded\n" : "failed\n");
 
         // ack send manually because e2e_success is not known during sending
         util::send_ack(sock, curr_ref, e2e_success); 
@@ -85,14 +80,11 @@ int main(int argc, char *argv[]) {
 
     // NEEDSWORK: Should we allow another OPEN packet?
     ++curr_ref;
-    std::cerr << "WE ARE DONE. EXPECTING CLOSE PACKET with ref = " << curr_ref << '\n';
     Packet::Client::Close close_pkt =
         util::expect_x_ack_y<Packet::Client::Close, Packet::Client::E2E_Check>(
             sock, curr_ref, curr_ref-1, e2e_success);
 
     (void)close_pkt;
-    
-    std::cerr << "SENDING 15 ACKS AND QUITTING\n";
 
     // sending 50 acknowledgements that Client::Close arrived
     Packet::Server::Ack ack{curr_ref, true};

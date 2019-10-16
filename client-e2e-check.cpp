@@ -11,7 +11,7 @@
 
 using namespace C150NETWORK;
 
-#define GRADING &std::cout
+//#define GRADING &std::cout
 
 const int DEFAULT_TIMEOUT = 5; // milliseconds
 
@@ -40,9 +40,7 @@ int main(int argc, char *argv[]) {
 
     // Open connection
     Packet::Client::Open open_pkt{ref_token, static_cast<uint32_t>(filenames.size())};
-    std::cerr << "TRYING TO OPEN CONNECTION\n";
     util::send_to_server(sock, open_pkt);
-    std::cerr << "ACKNOWLEDGEMENT RECEIVED\n";
 
     for (const std::string &fname : filenames) {
         // -1 because of null terminator
@@ -60,7 +58,6 @@ int main(int argc, char *argv[]) {
             // Connect packet : transfers filename
             ++ref_token;
             Packet::Client::Connect connect_packet{ref_token, packet_num, fname.c_str()};
-            *GRADING << "File: " << fname << ", beginning transmission, attempt 0\n";
             util::send_to_server(sock, connect_packet);
         
             // Data transmission starts
@@ -71,11 +68,7 @@ int main(int argc, char *argv[]) {
                 assert(data.size() <= data_pkt_capacity);
 
                 Packet::Client::Data data_packet{ref_token, i, data.c_str()};
-                try {
-                    std::cerr << "sending data with ref " << ref_token << std::endl;
-                    util::send_to_server(sock, data_packet);
-                    std::cerr << "data sent!\n";
-                } catch (C150NetworkException& e) { std::cerr<< e.formattedExplanation(); throw; }
+                util::send_to_server(sock, data_packet);
             } 
 
             // E2E check packet : checks whether file has been transfered correctly.
@@ -90,14 +83,9 @@ int main(int argc, char *argv[]) {
             sock.turnOnTimeouts(std::max(duration/2, DEFAULT_TIMEOUT));
 
             Packet::Client::E2E_Check e2e_packet{ref_token, sha1.c_str()};
-            std::cerr << "SENDING E2E with ref = " << ref_token << std::endl;
             e2e_success = util::send_to_server(sock, e2e_packet);
-            std::cerr << "DONE SENDING E2E\n";
 
             sock.turnOnTimeouts(DEFAULT_TIMEOUT);
-
-            *GRADING << "File: " << fname << " end-to-end check " 
-                     << (e2e_success ? "succeeded" : "failed") << ", attempt 0\n";
 
         } while (!e2e_success);
     }
@@ -106,7 +94,5 @@ int main(int argc, char *argv[]) {
     // Close packet : informs server we're done
     ++ref_token;
     Packet::Client::Close close_packet{ref_token};
-    std::cerr << "SENDING CLOSE with ref = " << ref_token << '\n';
     util::send_to_server(sock, close_packet);
-    std::cerr << "DONE!!!\n";
 }
