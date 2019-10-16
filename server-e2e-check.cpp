@@ -73,6 +73,8 @@ int main(int argc, char *argv[]) {
                  << (e2e_success ? "succeeded\n" : "failed\n");
     }
 
+
+    // NEEDSWORK: Should we allow another OPEN packet?
     ++curr_ref;
     std::cerr << "WE ARE DONE. EXPECTING CLOSE PACKET with ref = " << curr_ref << '\n';
     Packet::Client::Close close_pkt =
