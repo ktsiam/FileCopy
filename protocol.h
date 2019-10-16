@@ -24,14 +24,14 @@ struct Base {
     std::string serialize() const;
     static std::optional<Pkt_T> deserialize(char *msg, std::size_t len);
 
-//protected:
+protected:
     void     set_valid_checksum() const;
     Checksum get_valid_checksum() const;
 
     Base(Reference reference_);
     ~Base() = default;
 
-//private:
+private:
     static Type my_type();
     bool is_corrupted()  const;
     bool is_valid_type() const;
@@ -58,7 +58,7 @@ namespace Client {
     struct Data : Base<Data> {
         Data(Reference reference_, uint32_t idx_, const char *data_);
 
-        uint32_t idx; // index (< Connect::packet_count) of current data packe
+        uint32_t idx; // index (< Connect::packet_count) of current data packet
 
         // -2 for null terminator in packet & retaining size multiple of 2
         static constexpr int DATA_SIZE = 512-sizeof(idx)-sizeof(Base)-2;

@@ -31,7 +31,6 @@ std::optional<Pkt_T> Base<Pkt_T>::deserialize(char *msg, std::size_t len) {
 
 template<class Pkt_T>
 void Base<Pkt_T>::set_valid_checksum() const {
-    checksum = 0;
     // temporary side effects on checksum
     auto check = get_valid_checksum(); 
     checksum = check;
