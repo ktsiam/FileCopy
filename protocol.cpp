@@ -12,6 +12,29 @@ Base<Pkt_T>::Base(Reference reference_)
     : reference(reference_), stored_type(my_type()) {}
 
 template<class Pkt_T>
+std::string Base<Pkt_T>::serialize() const {
+    const char *bytes = reinterpret_cast<const char*>(this);
+    return std::string{bytes, bytes+sizeof(Pkt_T)};
+}
+
+template<class Pkt_T>
+std::optional<Pkt_T> Base<Pkt_T>::deserialize(char *msg, std::size_t len) {
+    msg[len] = '\0'; // NEEDSWORK clean message
+    if (len < sizeof(Pkt_T)) return {};
+    const Pkt_T *obj = reinterpret_cast<const Pkt_T*>(msg);
+    if (!obj->is_valid_type() || obj->is_corrupted()) {
+        std::cerr << obj->stored_type << '-' << obj->checksum << std::endl;
+        std::cerr << "EXPECTED CHECKSUM : " << obj->get_valid_checksum() << std::endl;
+        std::cerr << "OBJECT IS CORRUPT: " << obj->is_corrupted() << std::endl;
+        if constexpr (std::is_same<Pkt_T,Packet::Client::Open>::value) {
+                std::cerr << "file_count = " << obj->file_count << std::endl;
+            }
+        return {};
+    }
+    return {*obj};
+}
+
+template<class Pkt_T>
 void Base<Pkt_T>::set_valid_checksum() const {
     checksum = 0;
     // temporary side effects on checksum

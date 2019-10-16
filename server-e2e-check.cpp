@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "WE ARE DONE. EXPECTING CLOSE PACKET with ref = " << curr_ref << '\n';
     Packet::Client::Close close_pkt =
         util::expect_x_ack_y<Packet::Client::Close, Packet::Client::E2E_Check>(
-            sock, curr_ref, e2e_success);
+            sock, curr_ref, curr_ref-1, e2e_success);
 
     (void)close_pkt;
     
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 
     // sending 15 acknowledgements that Client::Close arrived
     Packet::Server::Ack ack{curr_ref, true};
-    std::string msg = util::serialize(ack);
+    std::string msg = ack.serialize();
     for (int i = 0; i < 15; ++i) {
         sock.write(msg.c_str(), msg.size()+1);
     }

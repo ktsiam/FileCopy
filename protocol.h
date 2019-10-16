@@ -1,6 +1,7 @@
 #ifndef _FILECOPY_PROTOCOL_H_
 #define _FILECOPY_PROTOCOL_H_
 #include <cstdint>
+#include <optional>
 
 namespace Packet {
 
@@ -20,8 +21,8 @@ template<class Pkt_T> // CRTP pattern
 struct Base {
     Reference reference;
     
-    bool is_corrupted()  const;
-    bool is_valid_type() const;
+    std::string serialize() const;
+    static std::optional<Pkt_T> deserialize(char *msg, std::size_t len);
 
 //protected:
     void     set_valid_checksum() const;
@@ -32,6 +33,8 @@ struct Base {
 
 //private:
     static Type my_type();
+    bool is_corrupted()  const;
+    bool is_valid_type() const;
 
     Type stored_type;
     mutable Checksum checksum; // modified & reverted during some methods

@@ -33,6 +33,6 @@ std::string util::remove_path(std::string const& fname) {
 void util::send_ack(C150NastyDgmSocket &sock, Packet::Reference ref, 
                                               bool success) {
     Packet::Server::Ack ack{ref, success};
-    std::string msg = util::serialize(ack);
+    std::string msg = ack.serialize();
     sock.write(msg.c_str(), msg.size()+1);
 }
