@@ -13,7 +13,7 @@ using namespace C150NETWORK;
 
 #define GRADING &std::cout
 
-const int DEFAULT_TIMEOUT = 50000;//5; // milliseconds
+const int DEFAULT_TIMEOUT = 5; // milliseconds
 
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);

@@ -75,7 +75,8 @@ int main(int argc, char *argv[]) {
         *GRADING << "File: " << filename << " end-to-end check " 
                  << (e2e_success ? "succeeded\n" : "failed\n");
 
-        util::send_ack(sock, curr_ref, e2e_success);
+        // ack send manually because e2e_success is not known during sending
+        util::send_ack(sock, curr_ref, e2e_success); 
         if (e2e_success == false) {
             --file_idx; // starting loop over for same file
         }
