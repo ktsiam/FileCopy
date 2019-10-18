@@ -26,7 +26,7 @@ void send_ack(C150NastyDgmSocket &sock, Packet::Reference ref, bool success = tr
 template<typename Pkt_T>
 bool send_to_server(C150NastyDgmSocket &sock, const Pkt_T &packet) {
     static char incomingMessage[512];
-    static const int total_retries = 10000000;
+    static const int total_retries = 100000;
 
     Packet::Reference ref_token = packet.reference;
     std::string msg = packet.serialize();    
