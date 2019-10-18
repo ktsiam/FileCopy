@@ -1,4 +1,5 @@
 #include "c150nastydgmsocket.h"
+#include "c150nastyfile.h"
 #include "c150grading.h"
 #include <cassert>
 #include <vector>
@@ -13,16 +14,16 @@ using namespace C150NETWORK;
 
 //#define GRADING &std::cout
 
-const int DEFAULT_TIMEOUT = 5; // milliseconds
+const int DEFAULT_TIMEOUT = 1; // milliseconds
 
 int main(int argc, char *argv[]) {
     GRADEME(argc, argv);
     assert(argc == 5);
-
-    // ignoring argv[3] for now
-    std::string server_name = argv[1];
-    int network_nastiness   = std::stoi(argv[2]);
-    std::string dir_name    = argv[4];    
+    try{
+    std::string server_name       = argv[1];
+    const int network_nastiness   = std::stoi(argv[2]);
+    const int file_nastiness      = std::stoi(argv[3]);
+    const std::string dir_name    = argv[4];    
     
     std::vector<std::string> filenames;
     for (std::filesystem::directory_entry const& file :
@@ -31,6 +32,7 @@ int main(int argc, char *argv[]) {
         filenames.push_back(file.path());
     }
 
+    C150NastyFile file_reader{file_nastiness};
     C150NastyDgmSocket sock{network_nastiness};
 
     sock.setServerName(&server_name.front());
@@ -45,16 +47,13 @@ int main(int argc, char *argv[]) {
     for (const std::string &fname : filenames) {
         // -1 because of null terminator
         constexpr int data_pkt_capacity = Packet::Client::Data::DATA_SIZE - 1;
-
-        std::ifstream inf{fname};
-        std::string contents{std::istreambuf_iterator<char>(inf),
-                             std::istreambuf_iterator<char>()};
-
-        uint32_t packet_num = contents.size() / data_pkt_capacity + 
-                             (contents.size() % data_pkt_capacity == 0 ? 0 : 1);
-
         bool e2e_success;
+
         do {
+            std::string contents = util::get_contents(fname, file_reader);
+            uint32_t packet_num = contents.size() / data_pkt_capacity + 
+                (contents.size() % data_pkt_capacity == 0 ? 0 : 1);
+
             // Connect packet : transfers filename
             ++ref_token;
             Packet::Client::Connect connect_packet{ref_token, packet_num, fname.c_str()};
@@ -74,20 +73,20 @@ int main(int argc, char *argv[]) {
             // E2E check packet : checks whether file has been transfered correctly.
             ++ref_token;        
             auto t1 = std::chrono::high_resolution_clock::now();
-            std::string sha1 = util::get_SHA1_from_file(fname);        
+            std::string sha1 = util::get_SHA1_from_file(fname, file_reader);        
             auto t2 = std::chrono::high_resolution_clock::now();
 
             int duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1)
                 .count();
         
-            sock.turnOnTimeouts(std::max(duration/2, DEFAULT_TIMEOUT));
+            sock.turnOnTimeouts(std::max(duration/20, DEFAULT_TIMEOUT));
 
             Packet::Client::E2E_Check e2e_packet{ref_token, sha1.c_str()};
             e2e_success = util::send_to_server(sock, e2e_packet);
 
             sock.turnOnTimeouts(DEFAULT_TIMEOUT);
 
-        } while (!e2e_success);
+        } while (!e2e_success && std::cerr << "retry\n");
     }
     
     
@@ -95,4 +94,8 @@ int main(int argc, char *argv[]) {
     ++ref_token;
     Packet::Client::Close close_packet{ref_token};
     util::send_to_server(sock, close_packet);
+
+    }catch(C150NetworkException &e) {
+        std::cerr << e.formattedExplanation() << std::endl;
+    }
 }

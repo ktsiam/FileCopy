@@ -7,21 +7,26 @@
 #include <cassert>
 #include "protocol.h"
 #include "c150nastydgmsocket.h"
+#include "c150nastyfile.h"
 
 using C150NETWORK::C150NastyDgmSocket;
 using C150NETWORK::C150NetworkException;
+using C150NETWORK::C150NastyFile;
+using C150NETWORK::C150Exception;
 
 namespace util {
 
-std::string get_SHA1_from_file(std::string const& filename);
-std::string remove_path(std::string const& fname);
+std::string get_contents(const std::string &fname, C150NastyFile &f_reader);
+void set_contents(const std::string &fname, C150NastyFile &f_reader, const std::string &data);
+std::string get_SHA1_from_file(const std::string &fname, C150NastyFile &f_reader);
+std::string remove_path(const std::string &fname);
 
 void send_ack(C150NastyDgmSocket &sock, Packet::Reference ref, bool success = true);
 
 template<typename Pkt_T>
 bool send_to_server(C150NastyDgmSocket &sock, const Pkt_T &packet) {
     static char incomingMessage[512];
-    static const int total_retries = 100;
+    static const int total_retries = 10000000;
 
     Packet::Reference ref_token = packet.reference;
     std::string msg = packet.serialize();    
@@ -33,6 +38,7 @@ bool send_to_server(C150NastyDgmSocket &sock, const Pkt_T &packet) {
         readlen = sock.read(incomingMessage, sizeof(incomingMessage));
         if (sock.timedout()) { 
             sock.write(msg.c_str(), msg.size()+1);
+            std::cerr << "TIMEDOUT: " << packet.reference << '\n';
             continue;
         }
         
@@ -52,7 +58,6 @@ template<class Exp_T, class Ack_T = Exp_T>
 Exp_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref, 
                                                Packet::Reference prev_ref,
                                                bool success_ack = true) {
-
     static char incomingMessage[512];
     while (1) {
         int readlen = sock.read(incomingMessage, sizeof(incomingMessage));
@@ -67,7 +72,6 @@ Exp_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref,
                 return curr_pkt;
             }
         }
-
         std::optional<Ack_T> prev_pkt_opt = Ack_T::deserialize(incomingMessage, readlen);
         
         if (prev_pkt_opt.has_value() && // previous type (can be same as expected)
@@ -76,11 +80,6 @@ Exp_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref,
             continue;
         }
     }
-}
-
-template<class Pkt_T>
-Pkt_T expect_x(C150NastyDgmSocket &sock, Packet::Reference curr_ref) {
-    return expect_x_ack_y<Pkt_T, Pkt_T>(sock, curr_ref, curr_ref);
 }
 
 } // namespace util

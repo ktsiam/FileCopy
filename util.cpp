@@ -2,15 +2,63 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <array>
+#include <algorithm>
+#include <map>
 #include "util.h"
+#include "c150nastyfile.h" 
 
-std::string util::get_SHA1_from_file(std::string const& filename) {
-    std::ifstream inf(filename);
-    if (!inf) throw "Non-existant file";
+const int NUM_TRIES = 5;
 
-    std::ostringstream oss;
-    oss << inf.rdbuf();
-    std::string contents = oss.str();
+static char median(const std::vector<std::string> &data, int idx)
+{
+    std::map<char, int> map;
+    std::vector<char> v;
+    for (int i = 0; i < NUM_TRIES; ++i) {
+        char c = data[i][idx];
+        if (map.find(c) == map.end())
+            map[c] = 0;
+        map[c]++;
+    }
+    return std::max_element(map.begin(), map.end(), 
+       [](auto &a, auto &b) { return a.second < b.second; })->first;
+}
+
+void util::set_contents(const std::string &fname, C150NastyFile &f_writer, const std::string &data) {
+    void *fp = f_writer.fopen(fname.c_str(), "wb");
+    if (!fp) throw C150Exception{"Could not open files"};
+
+    f_writer.fwrite(data.c_str(), sizeof(char), data.size());
+    f_writer.fclose();
+
+    if (get_contents(fname, f_writer) != data) // invariant check
+        set_contents(fname, f_writer, data);
+}
+
+std::string util::get_contents(const std::string &fname, C150NastyFile &f_reader) {
+    void *fp = f_reader.fopen(fname.c_str(), "rb");
+    if (!fp) throw C150Exception{"Could not open file"};
+
+    f_reader.fseek(0L, SEEK_END);
+    std::size_t size = f_reader.ftell();    
+
+    std::vector<std::string> data{NUM_TRIES};
+
+    for (int i = 0; i < NUM_TRIES; ++i) {
+        data[i].resize(size,'\n');
+        f_reader.rewind();
+        f_reader.fread(&data[i][0], sizeof(char), size);
+    }
+
+    f_reader.fclose();
+    for (std::size_t i = 0; i < size; ++i) {
+        data[0][i] = median(data, i);
+    }
+    return data[0];    
+}
+
+std::string util::get_SHA1_from_file(const std::string &fname, C150NastyFile &f_reader) {
+    std::string contents = get_contents(fname, f_reader);
 
     unsigned char sha1_hash[20];
     SHA1(reinterpret_cast<const unsigned char*>(contents.c_str()),
