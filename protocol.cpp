@@ -1,5 +1,6 @@
 #include "protocol.h"
 #include "util.h"
+#include "c150utility.h"
 #include <cstdio>
 #include <cstring>
 #include <string.h>
@@ -19,7 +20,9 @@ std::string Base<Pkt_T>::serialize() const {
 
 template<class Pkt_T>
 std::optional<Pkt_T> Base<Pkt_T>::deserialize(char *msg, std::size_t len) {
-    msg[len] = '\0'; // NEEDSWORK clean message
+    msg[len] = '\0';
+    std::for_each(msg, msg+len, C150NETWORK::cleanChar);
+
     if (len < sizeof(Pkt_T)) return {};
     const Pkt_T *obj = reinterpret_cast<const Pkt_T*>(msg);
 
@@ -45,7 +48,7 @@ Checksum Base<Pkt_T>::get_valid_checksum() const {
     checksum = 0;
 
     uint32_t check_sum_ = 0;
-    for (std::size_t i = 0; i < sizeof(Pkt_T)/2; ++i) {
+    for (std::size_t i = 0; i < sizeof(Pkt_T)/sizeof(uint16_t); ++i) {
         check_sum_ += reinterpret_cast<const uint16_t*>(this)[i];
     }
     checksum = old_checksum; // re-adding old checksum
@@ -78,8 +81,8 @@ MY_TYPE_SPECIALIZATION(Server::Ack,       Type::SERVER_ACK)
 
 
 
-
 /* Specialized Packets */
+
 Client::Open::Open(Reference reference_, uint32_t file_count_)
     : Base(reference_), file_count(file_count_) {
     set_valid_checksum();

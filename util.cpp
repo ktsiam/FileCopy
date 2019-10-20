@@ -8,7 +8,8 @@
 #include "util.h"
 #include "c150nastyfile.h" 
 
-const int NUM_TRIES = 5;
+// used to extract median of characters from `NUM_TRIES` different file reads
+static const int NUM_TRIES = 5;
 
 static char median(const std::vector<std::string> &data, int idx)
 {
@@ -26,18 +27,18 @@ static char median(const std::vector<std::string> &data, int idx)
 
 void util::set_contents(const std::string &fname, C150NastyFile &f_writer, const std::string &data) {
     void *fp = f_writer.fopen(fname.c_str(), "wb");
-    if (!fp) throw C150Exception{"Could not open files"};
+    if (!fp) throw C150Exception{"Cannot open file to write"};
 
     f_writer.fwrite(data.c_str(), sizeof(char), data.size());
     f_writer.fclose();
 
-    if (get_contents(fname, f_writer) != data) // invariant check
+    if (get_contents(fname, f_writer) != data) // invariant check & repeat
         set_contents(fname, f_writer, data);
 }
 
 std::string util::get_contents(const std::string &fname, C150NastyFile &f_reader) {
     void *fp = f_reader.fopen(fname.c_str(), "rb");
-    if (!fp) throw C150Exception{"Could not open file"};
+    if (!fp) throw C150Exception{"Can not open file to read"};
 
     f_reader.fseek(0L, SEEK_END);
     std::size_t size = f_reader.ftell();    
@@ -63,7 +64,6 @@ std::string util::get_SHA1_from_file(const std::string &fname, C150NastyFile &f_
     unsigned char sha1_hash[20];
     SHA1(reinterpret_cast<const unsigned char*>(contents.c_str()),
          contents.size(), sha1_hash);
-
     return std::string(&sha1_hash[0], &sha1_hash[20]);
 }
 
@@ -72,8 +72,9 @@ std::string util::remove_path(std::string const& fname) {
     for (char c : fname) {
         if (c == '/') {
             cut_fn = "";
+        } else {
+            cut_fn.push_back(c);
         }
-        cut_fn.push_back(c);
     }    
     return cut_fn;
 }

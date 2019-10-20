@@ -16,29 +16,36 @@ using C150NETWORK::C150Exception;
 
 namespace util {
 
+// These functions attempt to work correctly, but are not failproof
 std::string get_contents(const std::string &fname, C150NastyFile &f_reader);
-void set_contents(const std::string &fname, C150NastyFile &f_reader, const std::string &data);
+void        set_contents(const std::string &fname, C150NastyFile &f_reader, 
+                         const std::string &data);
+
+// Uses above get_contents method 
 std::string get_SHA1_from_file(const std::string &fname, C150NastyFile &f_reader);
+
+// e.g. /path/to/text.txt --> text.txt 
 std::string remove_path(const std::string &fname);
 
+// sends acknowledgement of given reference number
 void send_ack(C150NastyDgmSocket &sock, Packet::Reference ref, bool success = true);
 
+
+// attempts sending a packet, retrying until a packet is received
 template<typename Pkt_T>
 bool send_to_server(C150NastyDgmSocket &sock, const Pkt_T &packet) {
     static char incomingMessage[512];
-    static const int total_retries = 100000;
 
     Packet::Reference ref_token = packet.reference;
-    std::string msg = packet.serialize();    
+    std::string msg = packet.serialize(); 
 
     int readlen;
     sock.write(msg.c_str(), msg.size()+1);
-    for (int i = 0; i < total_retries; ++i) {
-
+    
+    while (1) {
         readlen = sock.read(incomingMessage, sizeof(incomingMessage));
         if (sock.timedout()) { 
             sock.write(msg.c_str(), msg.size()+1);
-            // std::cerr << "TIMEDOUT: " << packet.reference << '\n';
             continue;
         }
         
@@ -50,10 +57,11 @@ bool send_to_server(C150NastyDgmSocket &sock, const Pkt_T &packet) {
 
         return inc.success;
     }
-    throw C150NetworkException("no response after 100,000 retries");
 }
 
 
+// keeps sending acknowledgements for packets of Reference `prev_ref` and type `Ack_T`
+// until a valid packet of type `Exp_T` with Reference `curr_ref` arrives and is returned
 template<class Exp_T, class Ack_T = Exp_T>
 Exp_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref, 
                                                Packet::Reference prev_ref,
@@ -62,16 +70,18 @@ Exp_T expect_x_ack_y(C150NastyDgmSocket &sock, Packet::Reference curr_ref,
     while (1) {
         int readlen = sock.read(incomingMessage, sizeof(incomingMessage));
         std::optional<Exp_T> curr_pkt_opt = Exp_T::deserialize(incomingMessage, readlen);
-        
+
         if (curr_pkt_opt.has_value()) { // packet it correct type & intact
             const Exp_T &curr_pkt = curr_pkt_opt.value();
             if (curr_pkt.reference == curr_ref) {
                 if constexpr (!std::is_same<Exp_T,Packet::Client::E2E_Check>::value) {
-                    send_ack(sock, curr_ref); // optimization: send default ack immediately
+                    // optimization : sending ack immediately
+                    send_ack(sock, curr_ref); 
                 }
                 return curr_pkt;
             }
         }
+        // fallthrough if packet doesn't match expected
         std::optional<Ack_T> prev_pkt_opt = Ack_T::deserialize(incomingMessage, readlen);
         
         if (prev_pkt_opt.has_value() && // previous type (can be same as expected)
