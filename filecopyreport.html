@@ -166,13 +166,13 @@ No.
      keep the color:grey styling on your report! :-) -->
 
 <h3>Protocol</h3>
-The client sequentially loops through every file in a directory, verifies read-in, establishes connection, transfers data, and performs an end-to-end check. Files received at the server are first named with a .TMP suffix and renamed to their original names after succeeding end-to-end checking. Finally after completing transferring all files from the source directory, it sends a signal to close the connection and quits. Our protocol has been tested to work with network nastiness level 4 and file nastiness level 5.
+The client sequentially loops through every file in a directory, verifies read-in, establishes connection, transfers data, and performs end-to-end checking and recovery. Files received at the server are first named with a .TMP suffix and renamed to their original names after succeeding end-to-end checking. Finally after completing transferring all files from the source directory, it sends a signal to close the connection and quits. Our protocol has been tested to work with network nastiness level 4 and file nastiness level 5.
 <br>
 <br>
 To counter file system corruption, the client reads in each file five times and compares the five reads byte by byte. For any byte, if any discrepancy exists among the five reads, the client settles the discrepancy by taking the mode of the 5 reads. The server only writes the file once into hard disk, but writing correctness is ensured via end-to-end check with the client.
 <br>
 <br>
-Data transimission starts with Each of the client packets are idempotent, contain a unique reference number, and are tried up to 100,000 times with a timeout of 3s without acknowlegement. If the client fails to send any packet after 100,000 tries, it will declare network error and quit. This protocol does not otherwise give up on transferring any file or skip any file. For both normal case and recovery, packets are sent sequentially with regard to the file content.
+Each of the client packets is idempotent, contains a unique reference number, and is tried up to 100,000 times with a timeout of 3s without acknowlegement. If the client fails to send any packet after 100,000 tries, it will declare network error and quit. This protocol does not otherwise give up transferring any file or skip any file. For both normal case and recovery, packets are sent sequentially with regard to the file content.
 <br>
 <br>
 No additional event besides the ones specified on the assignment page is introduced to the grading log.
@@ -197,18 +197,18 @@ When receiving a packet, if type is different than expected, checksum shows corr
 <br>
 <br>
 namespace Packet { <br>
-  <tab>using Checksum  = uint16_t; // Makes sure packet is intact</tab><br>
-  <tab>using Reference = uint16_t; // Client: idempotency token </tab><br>
-  <tab>// Server: reference to Client packet </tab><br>
-  <tab>// Slightly redundant because of Reference, but useful in practice </tab><br>
+  using Checksum  = uint16_t; // Makes sure packet is intact <br>
+  using Reference = uint16_t; // Client: idempotency token <br>
+  // Server: reference to Client packet <br>
+  // Slightly redundant because of Reference, but useful in practice <br>
 
-  <tab>enum Type : uint16_t { CLIENT_CONNECT, CLIENT_DATA, CLIENT_E2E_CHECK, CLIENT_CLOSE, SERVER_ACK }; </tab><br>
+  enum Type : uint16_t { CLIENT_CONNECT, CLIENT_DATA, CLIENT_E2E_CHECK, CLIENT_CLOSE, SERVER_ACK }; <br>
 
-<tab>struct Base { </tab><br>
-    <dtab>Checksum  checksum; </dtab><br>
-    <dtab>Reference reference; </dtab><br>
-    <dtab>Type      type; </dtab><br>
-    <tab>}; </tab><br>
+  struct Base { <br>
+    Checksum  checksum; <br>
+    Reference reference; <br>
+    Type      type;<br>
+  }; <br>
 }; 
 <br>
 
@@ -233,25 +233,28 @@ Client Packets:
 <br>
 
 namespace Client { <br>
-    <tab>struct Connect : Base { </tab><br>
-    <dtab>uint16_t packet_count; // total number of packets </dtab><br>
-    <dtab>char filename[256] = {0}; // path is not included </dtab><br>
-    <tab>}; </tab><br>
+    struct Connect : Base { <br>
+    uint16_t packet_count; // total number of packets <br>
+    char filename[256] = {0}; // path is not included <br>
+    }; <br>
 
-    <tab>struct Data : Base { </tab><br>
-    <dtab>uint16_t idx; // index (< Connect::packet_count) of current data packet </dtab><br>
-    <dtab>char data[512-sizeof(idx)-sizeof(Base)] = {0}; // null terminated </dtab><br>
-    <tab>}; </tab><br>
+    struct Data : Base { <br>
+    uint16_t idx; // index (Connect::packet_count) of current data packet <br>
+    char data[512-sizeof(idx)-sizeof(Base)] = {0}; // null terminated <br>
+    }; <br>
 
-    <tab>struct E2E_Check : Base { </tab><br>
-    <dtab>char sha1_file_checksum[20] = {0}; </dtab><br>
-    <tab>}; </tab><br>
+    struct E2E_Check : Base { <br>
+    char sha1_file_checksum[20] = {0}; <br>
+    }; <br>
 
-    <tab>struct Close : Base {};</tab><br>
+    struct Close : Base {};<br>
 }; // namespace Client <br>
 
 <h3>Other</h3>
-Runze would suggest allowing the report to be prepared in other formats such as md or pdf. Formatting this HTML to properly exhibit code blocks take a bit too much time.
+From lectures, we understand that non-end-to-end checking and recovery is a about performance tradeoff. Through this assignment, we came to realize non-end-to-end checking and recovery could also greatly increase code complexity. We also explored multiple strategies to counter file system corruption and discovered byte by byte comparison of multiple reads to be effective.
+<br>
+<br>
+Since the purpose of this report is to document and explain our protocol, Runze would suggest allowing the report to be prepared in other formats such as md or pdf. He tried and failed to format this HTML to properly exhibit code blocks. Any guidance on how to achieve this would be much appreciated.
 <br>
 <br>
 The majority of the code was completed with both team members present. The report was drafted by Runze and revised by Kostas.
