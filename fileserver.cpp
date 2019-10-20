@@ -48,7 +48,10 @@ int main(int argc, char *argv[]) {
             Packet::Reference file_ref = connect_pkt.reference;        
             std::string filename = target_dir + connect_pkt.filename;
 
-	    *GRADING << "File: " << connect_pkt.filename << " starting to receive file\n";
+            std::string out_name = connect_pkt.filename;
+	    if (out_name.substr(0, 1) == "/")
+	    	 out_name = out_name.substr(1, out_name.length() - 1);
+	    *GRADING << "File: " << out_name << " starting to receive file\n";
 
             // Receiving data
             uint32_t pkt_idx = 0;
@@ -67,7 +70,7 @@ int main(int argc, char *argv[]) {
             data += data_pkt.data;
             util::set_contents(filename + ".TMP", file_reader, data);
 
-            *GRADING << "File: " << connect_pkt.filename << " received, beginning end-to-end check\n";
+            *GRADING << "File: " << out_name << " received, beginning end-to-end check\n";
 
             // E2E Check
             Packet::Client::E2E_Check e2e_pkt = 
@@ -81,11 +84,11 @@ int main(int argc, char *argv[]) {
             util::send_ack(sock, curr_ref, e2e_success); 
             if (e2e_success == false) {
                 --file_idx; // starting loop over for same file
-		*GRADING << "File: " << connect_pkt.filename << " end-to-end check failed\n";
+		*GRADING << "File: " << out_name << " end-to-end check failed\n";
             } else {
                std::rename((filename + ".TMP").c_str(), filename.c_str());
-               *GRADING << "File: " << connect_pkt.filename << " end-to-end check succeeded\n";
-	       std::cout << "File: " << connect_pkt.filename << " copied successfully\n";
+               *GRADING << "File: " << out_name << " end-to-end check succeeded\n";
+	       std::cout << "File: " << out_name << " copied successfully\n";
 	    }
         }
 
