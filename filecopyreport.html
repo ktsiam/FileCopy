@@ -1,0 +1,261 @@
+<!DOCTYPE HTML>
+<!-- 
+ **********************************************************
+
+             TUFTS COMP 117 HOMEWORK ASSIGNMENT
+
+        Fill in your name, e-mail and answers to questions
+        in the sections provided below.
+
+          All questions are marked up: <li class="q">
+          All answers are marked up:   <li class="a">
+
+
+     PLEASE DO NOT MODIFY ANY THING OTHER THAN THE 
+     NAME, E-MAIL, AND ANSWER FIELDS (you may also add
+     css declarations in the <head> if you need them,
+     but usually you won't.
+
+ **********************************************************
+ -->
+
+
+<html>
+<head>
+<meta charset="utf-8"> 
+<title>Tufts COMP 117 Assignment &#8212; File Copy Project Report</title>
+<link rel="stylesheet" type="text/css" href="http://www.cs.tufts.edu/comp/117/style/homework.css" />
+<style>
+code {color: blue}
+</style>
+<style>
+tab {margin-left: 1em;}
+dtab {margin-left: 2em;}
+</style>
+</head>
+
+<body class="homework">
+
+
+<!-- ******************************************************
+	   YOU MUST FILL IN YOUR NAME, UTLN AND EMAIL BELOW!!
+         (You may copy this from an earlier assignment
+                         if you like)
+
+     ****************************************************** -->
+
+
+<div class="student">
+<p>
+<span class="label">Student1 name: </span>
+Runze Si
+<br>
+
+<span class="label">UTLN: </span>
+rsi02
+<br>
+
+<span class="label">E-mail: </span>
+<!-- DON'T FORGET UP UPDATE THE MAILTO: URI BELOW ALONG WITH
+     YOUR EMAIL IN THE ANCHOR.  IT SHOULD LOOK LIKE:
+ <a href="mailto:lady.gaga@cs.tufts.edu">lady.gaga@cs.tufts.edu</a>
+--> 
+
+<a href="mailto:runze.si@tufts.edu">runze.si@tufts.edu</a>
+<br>
+<br>
+<br>
+<span class="label">Student2 name: </span>
+Kostas Tsiampouris
+<br>
+<span class="label">UTLN: </span>
+ktsiam01
+<br>
+
+<span class="label">E-mail: </span>
+<!-- DON'T FORGET UP UPDATE THE MAILTO: URI BELOW ALONG WITH
+     YOUR EMAIL IN THE ANCHOR.  IT SHOULD LOOK LIKE:
+ <a href="mailto:lady.gaga@cs.tufts.edu">lady.gaga@cs.tufts.edu</a>
+--> 
+
+<a href="mailto:Konstantinos.Tsiampouris@tufts.edu">Konstantinos.Tsiampouris@tufts.edu</a>
+
+<br>
+</p>
+</div>
+
+
+
+
+<div class="UpperLeftHeader">
+<p>Tufts COMP 117 (Fall 2019):
+<br>
+Internet-scale Distributed Systems
+</p>
+</div>
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - -
+		HOMEWORK TITLE
+  - -  - - - - - - - - - - - - - - - - - - - - - - -->
+
+
+<div class="headerdiv">
+<h1>
+Tufts COMP 117:<br>
+File Copy Project Report
+</h1>
+</div>
+
+<!-- ******************************************************
+
+              PLEASE ANSWER QUESTIONS IN THE SECTIONS
+	      LABELED class="a" (for answer)
+
+     ****************************************************** -->
+
+
+
+
+<div class="main">
+
+<h2 id="questions">Questions</h2>
+<!-- - - - - - - - - - - - - - - - - - - - - - - -
+		QUESTION
+  - -  - - - - - - - - - - - - - - - - - - - - - - -->
+<div class="qa">
+
+<ol class="qa">
+<li class="q">What are the highest "nastiness" levels at which you believe your program will
+successfully copy an entire directory full of files? (We will test your programs using those levels
+on both the client and the server; if all you got working
+was the end-to-end check, then please tell us how to test your work. <em>Also: if high network nastiness messes up your ability to deal with file nastiness, you can give us two pairs: e.g. Test my client and server with networknastiness=4 and filenastiness=1 or networknastiness=0 and filenastiness=3)</em></li>
+<li class="a">
+<!-- replace XX and YY with the actual values -->
+Please test my client and server with: networknastiness=4 and filenastiness=5.
+</li>
+
+<li class="q">Is there anything else we should
+know about testing your code, or what you expect it to do
+(beyond what's explained in your report below)?</li>
+<li class="a">
+No.
+</li>
+
+<li class="q">Did you get help from anyone other than your teammate? If "yes", then briefly explain who helped you and how.</li>
+<li class="a">
+No.
+</li>
+
+
+<li class="q">(optional) Do you have any other comments on this assignment (e.g. was it worthwhile, what did you learn from it, do you have suggestions for improvment if the course is offered again)?</li>
+<li class="a">
+No.
+</li>
+
+</ol>
+
+<!-- * * * * * * * * * * * * * * * * * * * * * -->
+<!--            REPORT GOES HERE               -->
+<!-- * * * * * * * * * * * * * * * * * * * * * -->
+
+<h2 id="reportbody">Report</h2>
+
+<!-- Delete the entire paragraph below 
+     and replace it with your report. (Do NOT
+     keep the color:grey styling on your report! :-) -->
+
+<h3>Protocol</h3>
+The client sequentially loops through every file in a directory, verifies read-in, establishes connection, transfers data, and performs an end-to-end check. Files received at the server are first named with a .TMP suffix and renamed to their original names after succeeding end-to-end checking. Finally after completing transferring all files from the source directory, it sends a signal to close the connection and quits. Our protocol has been tested to work with network nastiness level 4 and file nastiness level 5.
+<br>
+<br>
+To counter file system corruption, the client reads in each file five times and compares the five reads byte by byte. For any byte, if any discrepancy exists among the five reads, the client settles the discrepancy by taking the mode of the 5 reads. The server only writes the file once into hard disk, but writing correctness is ensured via end-to-end check with the client.
+<br>
+<br>
+Data transimission starts with Each of the client packets are idempotent, contain a unique reference number, and are tried up to 100,000 times with a timeout of 3s without acknowlegement. If the client fails to send any packet after 100,000 tries, it will declare network error and quit. This protocol does not otherwise give up on transferring any file or skip any file. For both normal case and recovery, packets are sent sequentially with regard to the file content.
+<br>
+<br>
+No additional event besides the ones specified on the assignment page is introduced to the grading log.
+
+
+<h3>Packet Sturctures</h3>
+<br>
+Contents of all packets (Packet::Base):
+<ul>
+  <li>
+  Packet::Type allows identifying type of packet by receiver
+  </li>
+  <li>
+  Packet::Checksum allows making sure packet is not corrupted
+  </li>
+  <li>
+  Packet::Reference allows server acknowledgements to be tied to a packet. Also all data packets must have References larger than their corresponding Connect packet, or they are disregarded by the server.
+  </li>
+</ul>
+
+When receiving a packet, if type is different than expected, checksum shows corruption, or acknowledgement reference doesn't correspond to packet last sent, packet is disposed of, and a new read begins.
+<br>
+<br>
+namespace Packet { <br>
+  <tab>using Checksum  = uint16_t; // Makes sure packet is intact</tab><br>
+  <tab>using Reference = uint16_t; // Client: idempotency token </tab><br>
+  <tab>// Server: reference to Client packet </tab><br>
+  <tab>// Slightly redundant because of Reference, but useful in practice </tab><br>
+
+  <tab>enum Type : uint16_t { CLIENT_CONNECT, CLIENT_DATA, CLIENT_E2E_CHECK, CLIENT_CLOSE, SERVER_ACK }; </tab><br>
+
+<tab>struct Base { </tab><br>
+    <dtab>Checksum  checksum; </dtab><br>
+    <dtab>Reference reference; </dtab><br>
+    <dtab>Type      type; </dtab><br>
+    <tab>}; </tab><br>
+}; 
+<br>
+
+
+Client Packets:
+<ul>
+  <li>
+   Client::Connect carries the filename as well as how many data packets are to follow. This allows the server to know when enough data packets have been transfered and expect the end-to-end check.
+  </li>
+  <li>
+   Client::Data carries the index of the packet, as well as the contents. The number of these packets to be sent and acknowledged are given by Client::Connect.
+  </li>
+  <li>
+   Client::E2E_Check is sent after all packages are transfered and acknowledged. It contains a SHA1 checksum for the whole file. The server acknowledges its reception and responds with whether the file was transfered successfully. If it has, then the client moves on to the next file, or sends Client::Close. If it hasn't then all data packets for the file are sent again.
+  </li>
+  <li>
+   Client::Close is sent after all files have been transfered and their 
+   integrity has been established. 
+  </li>
+</ul>
+
+<br>
+
+namespace Client { <br>
+    <tab>struct Connect : Base { </tab><br>
+    <dtab>uint16_t packet_count; // total number of packets </dtab><br>
+    <dtab>char filename[256] = {0}; // path is not included </dtab><br>
+    <tab>}; </tab><br>
+
+    <tab>struct Data : Base { </tab><br>
+    <dtab>uint16_t idx; // index (< Connect::packet_count) of current data packet </dtab><br>
+    <dtab>char data[512-sizeof(idx)-sizeof(Base)] = {0}; // null terminated </dtab><br>
+    <tab>}; </tab><br>
+
+    <tab>struct E2E_Check : Base { </tab><br>
+    <dtab>char sha1_file_checksum[20] = {0}; </dtab><br>
+    <tab>}; </tab><br>
+
+    <tab>struct Close : Base {};</tab><br>
+}; // namespace Client <br>
+
+<h3>Other</h3>
+Runze would suggest allowing the report to be prepared in other formats such as md or pdf. Formatting this HTML to properly exhibit code blocks take a bit too much time.
+<br>
+<br>
+The majority of the code was completed with both team members present. The report was drafted by Runze and revised by Kostas.
+</div>
+</div>
+</body>
+</html>
