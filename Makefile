@@ -11,13 +11,13 @@ LDFLAGS = -lpthread
 INCLUDES = $(C150LIB)c150dgmsocket.h $(C150LIB)c150nastydgmsocket.h $(C150LIB)c150network.h $(C150LIB)c150exceptions.h $(C150LIB)c150debug.h $(C150LIB)c150utility.h protocol.h util.h
 
 
-all: client-e2e-check server-e2e-check 
+all: fileclient fileserver
 
-client-e2e-check: client-e2e-check.o protocol.o util.o $(C150AR) $(INCLUDES)
-	$(CPP) -o client-e2e-check client-e2e-check.o protocol.o util.o $(C150AR) -lssl -lcrypto
+fileclient: fileclient.o protocol.o util.o $(C150AR) $(INCLUDES)
+	$(CPP) -o fileclient fileclient.o protocol.o util.o $(C150AR) -lssl -lcrypto
 
-server-e2e-check: server-e2e-check.o protocol.o util.o $(C150AR) $(INCLUDES)
-	$(CPP) -o server-e2e-check server-e2e-check.o protocol.o util.o $(C150AR) -lssl -lcrypto
+fileserver: fileserver.o protocol.o util.o $(C150AR) $(INCLUDES)
+	$(CPP) -o fileserver fileserver.o protocol.o util.o $(C150AR) -lssl -lcrypto
 
 protocol.o: protocol.cpp $(C150AR) $(INCLUDES)
 	$(CPP) -c $(CPPFLAGS) protocol.cpp
@@ -26,6 +26,6 @@ util.o: util.cpp protocol.o $(C150AR) $(INCLUDES)
 	$(CPP) -c $(CPPFLAGS) util.cpp
 
 clean:
-	rm -f client-e2e-check server-e2e-check *.o GRADELOG.*
+	rm -f fileclient fileserver *.o GRADELOG.*
 
 

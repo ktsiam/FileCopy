@@ -38,7 +38,7 @@ bool send_to_server(C150NastyDgmSocket &sock, const Pkt_T &packet) {
         readlen = sock.read(incomingMessage, sizeof(incomingMessage));
         if (sock.timedout()) { 
             sock.write(msg.c_str(), msg.size()+1);
-            std::cerr << "TIMEDOUT: " << packet.reference << '\n';
+            // std::cerr << "TIMEDOUT: " << packet.reference << '\n';
             continue;
         }
         
@@ -50,7 +50,7 @@ bool send_to_server(C150NastyDgmSocket &sock, const Pkt_T &packet) {
 
         return inc.success;
     }
-    throw C150NetworkException("no response after 100 retries");
+    throw C150NetworkException("no response after 100,000 retries");
 }
 
 
